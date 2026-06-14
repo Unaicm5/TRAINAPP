@@ -1,0 +1,1523 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>TrainApp — Panel de Entrenador</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;1,9..40,300&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+:root{
+  --bg:#09090b;--bg2:#111113;--bg3:#18181b;--bg4:#27272a;
+  --border:rgba(255,255,255,0.07);--border2:rgba(255,255,255,0.13);
+  --text:#fafafa;--text2:#a1a1aa;--text3:#52525b;
+  --accent:#a3e635;--accent-dim:rgba(163,230,53,0.12);--accent-border:rgba(163,230,53,0.3);
+  --green:#22c55e;--gdim:rgba(34,197,94,0.1);--gborder:rgba(34,197,94,0.3);
+  --amber:#f59e0b;--adim:rgba(245,158,11,0.1);--aborder:rgba(245,158,11,0.3);
+  --red:#ef4444;--rdim:rgba(239,68,68,0.1);--rborder:rgba(239,68,68,0.3);
+  --blue:#60a5fa;--bdim:rgba(96,165,250,0.1);--bborder:rgba(96,165,250,0.3);
+  --r:12px;--r-sm:8px;--r-xs:6px;
+}
+html,body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;min-height:100vh;overscroll-behavior:none;}
+h1,h2,h3,.syne{font-family:'Syne',sans-serif;}
+.mono{font-family:'DM Mono',monospace;}
+
+/* LAYOUT */
+.app{display:flex;min-height:100vh;}
+.sidebar{width:220px;background:var(--bg2);border-right:1px solid var(--border);display:flex;flex-direction:column;padding:20px 0;position:fixed;top:0;left:0;height:100vh;z-index:100;}
+.main{margin-left:220px;flex:1;padding:28px 32px;max-width:1100px;}
+@media(max-width:768px){
+  .sidebar{width:100%;height:auto;position:fixed;bottom:0;top:auto;flex-direction:row;padding:0;border-right:none;border-top:1px solid var(--border);z-index:200;}
+  .main{margin-left:0;padding:16px 16px 90px;}
+  .sidebar-logo,.sidebar-section-label{display:none;}
+  .sidebar-nav{flex-direction:row;padding:0;gap:0;}
+  .sidebar-nav-item{flex-direction:column;gap:2px;font-size:10px;padding:10px 8px;border-radius:0;flex:1;justify-content:center;}
+  .sidebar-nav-item i{font-size:20px;}
+  .sidebar-nav-item span{display:block;}
+}
+
+/* SIDEBAR */
+.sidebar-logo{padding:0 20px 24px;border-bottom:1px solid var(--border);margin-bottom:8px;}
+.logo-mark{width:36px;height:36px;background:var(--accent);border-radius:10px;display:flex;align-items:center;justify-content:center;margin-bottom:10px;}
+.logo-mark i{font-size:20px;color:#000;}
+.logo-name{font-family:'Syne',sans-serif;font-size:18px;font-weight:700;color:var(--text);}
+.logo-sub{font-size:11px;color:var(--text3);margin-top:1px;}
+.sidebar-section-label{font-size:10px;color:var(--text3);letter-spacing:0.1em;text-transform:uppercase;padding:16px 20px 6px;font-family:'DM Mono',monospace;}
+.sidebar-nav{display:flex;flex-direction:column;gap:2px;padding:0 10px;}
+.sidebar-nav-item{display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:var(--r-sm);cursor:pointer;font-size:13px;color:var(--text2);transition:all 0.15s;border:none;background:none;width:100%;text-align:left;font-family:'DM Sans',sans-serif;}
+.sidebar-nav-item i{font-size:18px;flex-shrink:0;}
+.sidebar-nav-item:hover{background:var(--bg3);color:var(--text);}
+.sidebar-nav-item.active{background:var(--accent-dim);color:var(--accent);border:0.5px solid var(--accent-border);}
+.sidebar-nav-item span{white-space:nowrap;}
+.sidebar-bottom{margin-top:auto;padding:16px 10px 0;border-top:1px solid var(--border);}
+
+/* COMPONENTS */
+.page{display:none;animation:fadeIn 0.2s ease;}
+.page.active{display:block;}
+@keyframes fadeIn{from{opacity:0;transform:translateY(6px);}to{opacity:1;transform:translateY(0);}}
+
+.page-header{margin-bottom:24px;}
+.page-title{font-family:'Syne',sans-serif;font-size:26px;font-weight:700;color:var(--text);letter-spacing:-0.02em;}
+.page-sub{font-size:14px;color:var(--text2);margin-top:4px;}
+
+.card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:20px;}
+.card-sm{padding:14px 16px;}
+
+.grid-2{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;}
+.grid-3{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;}
+.grid-4{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;}
+@media(max-width:600px){.grid-4,.grid-3{grid-template-columns:repeat(2,1fr);}.grid-2{grid-template-columns:1fr;}}
+
+.metric-card{background:var(--bg3);border:1px solid var(--border);border-radius:var(--r);padding:16px;}
+.metric-label{font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:0.08em;font-family:'DM Mono',monospace;margin-bottom:6px;}
+.metric-val{font-size:28px;font-weight:600;font-family:'Syne',sans-serif;letter-spacing:-0.02em;}
+.metric-sub{font-size:12px;color:var(--text3);margin-top:2px;}
+
+.badge{display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:500;padding:3px 9px;border-radius:99px;}
+.badge-green{background:var(--gdim);color:var(--green);border:0.5px solid var(--gborder);}
+.badge-amber{background:var(--adim);color:var(--amber);border:0.5px solid var(--aborder);}
+.badge-red{background:var(--rdim);color:var(--red);border:0.5px solid var(--rborder);}
+.badge-accent{background:var(--accent-dim);color:var(--accent);border:0.5px solid var(--accent-border);}
+.badge-gray{background:var(--bg4);color:var(--text3);border:0.5px solid var(--border);}
+.badge-blue{background:var(--bdim);color:var(--blue);border:0.5px solid var(--bborder);}
+
+.btn{display:inline-flex;align-items:center;gap:6px;padding:8px 16px;border-radius:var(--r-sm);font-size:13px;font-weight:500;cursor:pointer;border:none;font-family:'DM Sans',sans-serif;transition:all 0.15s;}
+.btn-primary{background:var(--accent);color:#000;}
+.btn-primary:hover{background:#bef264;}
+.btn-ghost{background:transparent;color:var(--text2);border:1px solid var(--border);}
+.btn-ghost:hover{background:var(--bg3);color:var(--text);}
+.btn-sm{padding:5px 12px;font-size:12px;}
+.btn-danger{background:var(--rdim);color:var(--red);border:0.5px solid var(--rborder);}
+
+.section-label{font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:0.1em;font-family:'DM Mono',monospace;margin:20px 0 10px;}
+
+input,select,textarea{background:var(--bg3);border:1px solid var(--border2);border-radius:var(--r-sm);color:var(--text);font-family:'DM Sans',sans-serif;font-size:14px;padding:9px 12px;width:100%;outline:none;transition:border-color 0.15s;}
+input:focus,select:focus,textarea:focus{border-color:var(--accent);}
+textarea{resize:vertical;min-height:80px;}
+select option{background:var(--bg3);}
+label{font-size:13px;color:var(--text2);display:block;margin-bottom:5px;}
+.form-group{margin-bottom:14px;}
+
+/* CLIENT CARD */
+.client-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:18px;cursor:pointer;transition:all 0.15s;display:flex;align-items:center;gap:14px;}
+.client-card:hover{border-color:var(--border2);background:var(--bg3);}
+.avatar{width:44px;height:44px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:'Syne',sans-serif;font-size:15px;font-weight:700;flex-shrink:0;}
+.client-info{flex:1;min-width:0;}
+.client-name{font-size:15px;font-weight:500;font-family:'Syne',sans-serif;}
+.client-meta{font-size:12px;color:var(--text2);margin-top:2px;}
+.client-stats{display:flex;gap:12px;}
+.client-stat{text-align:center;}
+.client-stat-val{font-size:15px;font-weight:600;font-family:'Syne',sans-serif;}
+.client-stat-label{font-size:10px;color:var(--text3);font-family:'DM Mono',monospace;}
+
+/* SESSION CARD */
+.session-card{background:var(--bg3);border:1px solid var(--border);border-radius:var(--r);padding:16px;margin-bottom:8px;}
+.session-header{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;margin-bottom:10px;}
+.session-title{font-size:14px;font-weight:500;}
+.session-meta{font-size:12px;color:var(--text2);margin-top:2px;}
+.exercise-row{display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid var(--border);}
+.exercise-row:last-child{border-bottom:none;padding-bottom:0;}
+.exercise-name{font-size:13px;color:var(--text2);flex:1;}
+.chips{display:flex;gap:5px;flex-wrap:wrap;}
+.chip{font-size:11px;padding:3px 8px;border-radius:99px;background:var(--bg4);color:var(--text3);border:0.5px solid var(--border);}
+.chip.accent{background:var(--accent-dim);color:var(--accent);border-color:var(--accent-border);}
+.chip.red{background:var(--bdim);color:var(--blue);border-color:var(--bborder);}
+.note-box{background:rgba(245,158,11,0.06);border-left:2px solid var(--amber);border-radius:0 var(--r-xs) var(--r-xs) 0;padding:8px 12px;margin:8px 0;font-size:12px;color:#fcd34d;line-height:1.5;}
+.yt-link{display:inline-flex;align-items:center;gap:6px;padding:6px 12px;background:rgba(239,68,68,0.08);border:0.5px solid rgba(239,68,68,0.2);border-radius:var(--r-xs);color:#fca5a5;font-size:12px;text-decoration:none;}
+.yt-link:hover{background:rgba(239,68,68,0.15);}
+
+/* VALORACIONES */
+.val-row{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--border);}
+.val-row:last-child{border-bottom:none;padding-bottom:0;}
+.val-name{font-size:13px;color:var(--text2);flex:1;}
+.val-num{font-size:15px;font-weight:600;font-family:'Syne',sans-serif;min-width:70px;text-align:right;}
+.val-delta{font-size:11px;padding:2px 7px;border-radius:99px;white-space:nowrap;}
+.delta-up{background:var(--gdim);color:var(--green);}
+.delta-down{background:var(--rdim);color:var(--red);}
+.delta-neutral{background:var(--bg4);color:var(--text3);}
+.vis-toggle{font-size:10px;padding:2px 8px;border-radius:99px;cursor:pointer;border:0.5px solid var(--border);background:var(--bg4);color:var(--text3);white-space:nowrap;font-family:'DM Mono',monospace;}
+.vis-toggle.on{background:var(--gdim);color:var(--green);border-color:var(--gborder);}
+
+/* OBJETIVOS */
+.obj-card{border-radius:var(--r);padding:16px;margin-bottom:8px;border:1px solid;}
+.obj-achieved{background:rgba(34,197,94,0.06);border-color:var(--gborder);}
+.obj-progress{background:rgba(163,230,53,0.06);border-color:var(--accent-border);}
+.obj-warning{background:rgba(245,158,11,0.06);border-color:var(--aborder);}
+.obj-pending{background:var(--bg3);border-color:var(--border);}
+.obj-title{font-size:14px;font-weight:500;margin-bottom:4px;font-family:'Syne',sans-serif;}
+.obj-meta{font-size:12px;color:var(--text3);margin-bottom:10px;}
+.progress-bar{height:6px;background:var(--bg4);border-radius:99px;overflow:hidden;}
+.progress-fill{height:100%;border-radius:99px;transition:width 0.8s ease;}
+.obj-footer{display:flex;justify-content:space-between;align-items:center;margin-top:8px;}
+.obj-footer-label{font-size:11px;font-weight:500;}
+
+/* RPE CHART */
+.chart-wrap{position:relative;width:100%;height:180px;}
+
+/* MODAL */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.7);backdrop-filter:blur(4px);z-index:500;display:flex;align-items:flex-end;justify-content:center;opacity:0;pointer-events:none;transition:opacity 0.2s;}
+.modal-overlay.open{opacity:1;pointer-events:all;}
+.modal{background:var(--bg2);border:1px solid var(--border2);border-radius:var(--r) var(--r) 0 0;width:100%;max-width:560px;max-height:90vh;overflow-y:auto;padding:24px;transform:translateY(20px);transition:transform 0.2s;}
+.modal-overlay.open .modal{transform:translateY(0);}
+.modal-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;}
+.modal-title{font-family:'Syne',sans-serif;font-size:18px;font-weight:700;}
+.modal-close{background:var(--bg4);border:none;color:var(--text2);width:30px;height:30px;border-radius:50%;cursor:pointer;font-size:18px;display:flex;align-items:center;justify-content:center;}
+
+/* TOGGLE */
+.toggle{position:relative;width:40px;height:22px;cursor:pointer;flex-shrink:0;}
+.toggle input{opacity:0;width:0;height:0;}
+.toggle-track{position:absolute;inset:0;background:var(--bg4);border:0.5px solid var(--border2);border-radius:99px;transition:0.2s;}
+.toggle input:checked+.toggle-track{background:var(--accent);border-color:var(--accent);}
+.toggle-track::before{content:'';position:absolute;width:16px;height:16px;left:2px;top:2px;background:white;border-radius:50%;transition:0.2s;}
+.toggle input:checked+.toggle-track::before{transform:translateX(18px);background:#000;}
+
+/* WELLNESS FORM */
+.wellness-row{margin-bottom:12px;}
+.wellness-label-row{display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;}
+.wellness-name{font-size:13px;color:var(--text2);}
+.wellness-val{font-size:14px;font-weight:600;font-family:'Syne',sans-serif;color:var(--accent);}
+input[type=range]{-webkit-appearance:none;width:100%;height:4px;background:var(--bg4);border-radius:99px;border:none;padding:0;}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:16px;height:16px;border-radius:50%;background:var(--accent);cursor:pointer;}
+
+/* RPE BUTTONS */
+.rpe-row{display:flex;gap:6px;}
+.rpe-btn{flex:1;padding:8px 0;border:1px solid var(--border);border-radius:var(--r-sm);font-size:13px;font-weight:500;background:var(--bg3);color:var(--text2);cursor:pointer;font-family:'Syne',sans-serif;transition:all 0.1s;}
+.rpe-btn:hover,.rpe-btn.sel{background:var(--accent);color:#000;border-color:var(--accent);}
+
+/* TABS */
+.tab-row{display:flex;background:var(--bg3);border-radius:var(--r-sm);padding:3px;gap:3px;margin-bottom:18px;}
+.tab-btn{flex:1;padding:7px;border:none;background:transparent;border-radius:var(--r-xs);font-size:12px;cursor:pointer;color:var(--text2);font-family:'DM Sans',sans-serif;transition:all 0.15s;}
+.tab-btn.on{background:var(--bg2);color:var(--text);font-weight:500;border:0.5px solid var(--border2);}
+
+/* CALENDAR */
+.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:3px;}
+.cal-cell{aspect-ratio:1;border-radius:var(--r-xs);display:flex;align-items:center;justify-content:center;font-size:12px;cursor:default;color:var(--text2);position:relative;}
+.cal-cell.header{font-size:10px;color:var(--text3);font-family:'DM Mono',monospace;}
+.cal-cell.session{background:var(--accent-dim);color:var(--accent);font-weight:500;border:0.5px solid var(--accent-border);cursor:pointer;}
+.cal-cell.today{background:var(--accent);color:#000;font-weight:700;}
+.cal-cell.done::after{content:'';position:absolute;bottom:2px;left:50%;transform:translateX(-50%);width:4px;height:4px;border-radius:50%;background:var(--green);}
+
+/* SCROLLBAR */
+::-webkit-scrollbar{width:4px;height:4px;}
+::-webkit-scrollbar-track{background:transparent;}
+::-webkit-scrollbar-thumb{background:var(--bg4);border-radius:99px;}
+
+/* DIVIDER */
+hr{border:none;border-top:1px solid var(--border);margin:16px 0;}
+
+.empty-state{text-align:center;padding:40px 20px;color:var(--text3);}
+.empty-state i{font-size:36px;margin-bottom:12px;display:block;}
+.empty-state p{font-size:14px;}
+
+.tag-pill{display:inline-flex;align-items:center;gap:4px;font-size:11px;padding:4px 10px;border-radius:99px;background:var(--bg4);border:0.5px solid var(--border);color:var(--text3);margin:2px;}
+
+/* Notification */
+.toast{position:fixed;bottom:100px;left:50%;transform:translateX(-50%) translateY(20px);background:var(--bg2);border:1px solid var(--accent-border);border-radius:var(--r);padding:12px 20px;font-size:13px;color:var(--accent);opacity:0;transition:all 0.3s;z-index:999;pointer-events:none;white-space:nowrap;}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+@media(max-width:768px){.toast{bottom:90px;}}
+
+/* Back button */
+.back-btn{display:inline-flex;align-items:center;gap:6px;color:var(--text3);font-size:13px;cursor:pointer;margin-bottom:20px;border:none;background:none;font-family:'DM Sans',sans-serif;}
+.back-btn:hover{color:var(--text);}
+
+.inline-flex{display:inline-flex;align-items:center;gap:8px;}
+.flex-between{display:flex;align-items:center;justify-content:space-between;}
+.flex-center{display:flex;align-items:center;gap:10px;}
+.mt-8{margin-top:8px;}
+.mt-12{margin-top:12px;}
+.mt-16{margin-top:16px;}
+.mb-8{margin-bottom:8px;}
+.mb-12{margin-bottom:12px;}
+
+/* Link tags */
+.icon-link{position:relative;display:inline-block;width:5px;height:5px;border-radius:50%;background:currentColor;vertical-align:middle;}
+</style>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.19.0/dist/tabler-icons.min.css">
+</head>
+<body>
+
+<div class="app">
+<!-- SIDEBAR -->
+<nav class="sidebar" role="navigation" aria-label="Navegación principal">
+  <div class="sidebar-logo">
+    <div class="logo-mark"><i class="ti ti-bolt" aria-hidden="true"></i></div>
+    <div class="logo-name">TrainApp</div>
+    <div class="logo-sub">Panel de entrenador</div>
+  </div>
+  <div class="sidebar-section-label">Menú</div>
+  <div class="sidebar-nav">
+    <button class="sidebar-nav-item active" onclick="nav('dashboard')" id="nav-dashboard">
+      <i class="ti ti-layout-dashboard" aria-hidden="true"></i><span>Dashboard</span>
+    </button>
+    <button class="sidebar-nav-item" onclick="nav('clients')" id="nav-clients">
+      <i class="ti ti-users" aria-hidden="true"></i><span>Clientes</span>
+    </button>
+    <button class="sidebar-nav-item" onclick="nav('sessions')" id="nav-sessions">
+      <i class="ti ti-calendar" aria-hidden="true"></i><span>Sesiones</span>
+    </button>
+    <button class="sidebar-nav-item" onclick="nav('valoraciones')" id="nav-valoraciones">
+      <i class="ti ti-chart-bar" aria-hidden="true"></i><span>Valoraciones</span>
+    </button>
+    <button class="sidebar-nav-item" onclick="nav('carga')" id="nav-carga">
+      <i class="ti ti-trending-up" aria-hidden="true"></i><span>Control carga</span>
+    </button>
+    <button class="sidebar-nav-item" onclick="nav('nutricion')" id="nav-nutricion">
+      <i class="ti ti-apple" aria-hidden="true"></i><span>Nutrición</span>
+    </button>
+  </div>
+  <div class="sidebar-bottom sidebar-nav">
+    <button class="sidebar-nav-item" onclick="showModal('modal-new-client')">
+      <i class="ti ti-user-plus" aria-hidden="true"></i><span>Nuevo cliente</span>
+    </button>
+    <button class="sidebar-nav-item" onclick="showModal('modal-new-session')">
+      <i class="ti ti-plus" aria-hidden="true"></i><span>Nueva sesión</span>
+    </button>
+  </div>
+</nav>
+
+<!-- MAIN -->
+<main class="main">
+
+<!-- DASHBOARD -->
+<div class="page active" id="page-dashboard">
+  <div class="page-header">
+    <h1 class="page-title">Buenos días 👋</h1>
+    <p class="page-sub">Aquí tienes el resumen de hoy</p>
+  </div>
+  <div class="grid-4 mb-12" id="dash-metrics"></div>
+  <div class="grid-2">
+    <div>
+      <div class="section-label">Actividad reciente</div>
+      <div id="dash-activity"></div>
+    </div>
+    <div>
+      <div class="section-label">Alertas</div>
+      <div id="dash-alerts"></div>
+      <div class="section-label mt-16">Pendientes hoy</div>
+      <div id="dash-today"></div>
+    </div>
+  </div>
+</div>
+
+<!-- CLIENTS LIST -->
+<div class="page" id="page-clients">
+  <div class="flex-between mb-12">
+    <div class="page-header" style="margin-bottom:0;">
+      <h1 class="page-title">Clientes</h1>
+      <p class="page-sub" id="clients-count"></p>
+    </div>
+    <button class="btn btn-primary" onclick="showModal('modal-new-client')"><i class="ti ti-plus" aria-hidden="true"></i> Nuevo cliente</button>
+  </div>
+  <div id="clients-list"></div>
+</div>
+
+<!-- CLIENT DETAIL -->
+<div class="page" id="page-client-detail">
+  <button class="back-btn" onclick="nav('clients')"><i class="ti ti-arrow-left" aria-hidden="true"></i> Todos los clientes</button>
+  <div id="client-detail-content"></div>
+</div>
+
+<!-- SESSIONS -->
+<div class="page" id="page-sessions">
+  <div class="flex-between mb-12">
+    <div class="page-header" style="margin-bottom:0;">
+      <h1 class="page-title">Sesiones</h1>
+      <p class="page-sub">Gestiona y asigna sesiones a tus clientes</p>
+    </div>
+    <button class="btn btn-primary" onclick="showModal('modal-new-session')"><i class="ti ti-plus" aria-hidden="true"></i> Nueva sesión</button>
+  </div>
+  <div id="sessions-filter" style="margin-bottom:14px;display:flex;gap:8px;flex-wrap:wrap;"></div>
+  <div id="sessions-list"></div>
+</div>
+
+<!-- VALORACIONES -->
+<div class="page" id="page-valoraciones">
+  <div class="flex-between mb-12">
+    <div class="page-header" style="margin-bottom:0;">
+      <h1 class="page-title">Valoraciones</h1>
+      <p class="page-sub">Resultados y objetivos por cliente</p>
+    </div>
+    <button class="btn btn-primary" onclick="showModal('modal-new-val')"><i class="ti ti-plus" aria-hidden="true"></i> Registrar valoración</button>
+  </div>
+  <div id="val-client-selector" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px;"></div>
+  <div id="val-content"></div>
+</div>
+
+<!-- CONTROL CARGA -->
+<div class="page" id="page-carga">
+  <div class="page-header">
+    <h1 class="page-title">Control de carga</h1>
+    <p class="page-sub">RPE, wellness y evolución de todos tus clientes</p>
+  </div>
+  <div class="grid-4 mb-12" id="carga-metrics"></div>
+  <div class="grid-2">
+    <div class="card">
+      <div style="font-size:13px;font-weight:500;margin-bottom:12px;">RPE medio por cliente (últimas 4 semanas)</div>
+      <div class="chart-wrap"><canvas id="chart-rpe-clients" aria-label="RPE medio por cliente"></canvas></div>
+    </div>
+    <div class="card">
+      <div style="font-size:13px;font-weight:500;margin-bottom:12px;">Wellness promedio del grupo</div>
+      <div class="chart-wrap"><canvas id="chart-wellness-group" aria-label="Wellness promedio del grupo"></canvas></div>
+    </div>
+  </div>
+  <div class="section-label">Carga semanal por cliente (UA)</div>
+  <div class="card">
+    <div class="chart-wrap" style="height:200px;"><canvas id="chart-load" aria-label="Carga semanal por cliente"></canvas></div>
+  </div>
+</div>
+
+<!-- NUTRICIÓN -->
+<div class="page" id="page-nutricion">
+  <div class="flex-between mb-12">
+    <div class="page-header" style="margin-bottom:0;">
+      <h1 class="page-title">Nutrición</h1>
+      <p class="page-sub">Planes nutricionales por cliente</p>
+    </div>
+    <button class="btn btn-primary" onclick="showModal('modal-new-plan')"><i class="ti ti-plus" aria-hidden="true"></i> Nuevo plan</button>
+  </div>
+  <div id="nutri-client-selector" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px;"></div>
+  <div id="nutri-content"></div>
+</div>
+
+</main>
+</div>
+
+<!-- =================== MODALS =================== -->
+
+<!-- NEW CLIENT -->
+<div class="modal-overlay" id="modal-new-client" role="dialog" aria-modal="true" aria-labelledby="new-client-title">
+  <div class="modal">
+    <div class="modal-header">
+      <h2 class="modal-title" id="new-client-title">Nuevo cliente</h2>
+      <button class="modal-close" onclick="closeModal('modal-new-client')" aria-label="Cerrar">×</button>
+    </div>
+    <div class="form-group"><label>Nombre completo</label><input type="text" id="nc-name" placeholder="Ej: Carlos Martínez"></div>
+    <div class="grid-2">
+      <div class="form-group"><label>Edad</label><input type="number" id="nc-age" placeholder="28"></div>
+      <div class="form-group"><label>Objetivo principal</label>
+        <select id="nc-goal">
+          <option>Fuerza y potencia</option>
+          <option>Pérdida de grasa</option>
+          <option>Rendimiento deportivo</option>
+          <option>Movilidad y salud</option>
+          <option>Otro</option>
+        </select>
+      </div>
+    </div>
+    <div class="grid-2">
+      <div class="form-group"><label>Microciclo actual</label><input type="text" id="nc-micro" placeholder="Microciclo 1"></div>
+      <div class="form-group"><label>Color de avatar</label>
+        <select id="nc-color">
+          <option value="#a3e635">Verde lima</option>
+          <option value="#60a5fa">Azul</option>
+          <option value="#f472b6">Rosa</option>
+          <option value="#fb923c">Naranja</option>
+          <option value="#c084fc">Violeta</option>
+          <option value="#f9a8d4">Rosa claro</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-group"><label>Notas iniciales</label><textarea id="nc-notes" placeholder="Historial, lesiones, observaciones..."></textarea></div>
+    <button class="btn btn-primary" style="width:100%;justify-content:center;" onclick="addClient()">Añadir cliente</button>
+  </div>
+</div>
+
+<!-- NEW SESSION -->
+<div class="modal-overlay" id="modal-new-session" role="dialog" aria-modal="true" aria-labelledby="new-session-title">
+  <div class="modal">
+    <div class="modal-header">
+      <h2 class="modal-title" id="new-session-title">Nueva sesión</h2>
+      <button class="modal-close" onclick="closeModal('modal-new-session')" aria-label="Cerrar">×</button>
+    </div>
+    <div class="form-group"><label>Cliente</label>
+      <select id="ns-client" onchange="updateNsClient()"></select>
+    </div>
+    <div class="grid-2">
+      <div class="form-group"><label>Nombre de la sesión</label><input type="text" id="ns-name" placeholder="HT Squat · Microciclo 1"></div>
+      <div class="form-group"><label>Microciclo</label><input type="text" id="ns-micro" placeholder="Microciclo 1"></div>
+    </div>
+    <div class="grid-2">
+      <div class="form-group"><label>Fecha</label><input type="date" id="ns-date"></div>
+      <div class="form-group"><label>RPE objetivo</label>
+        <div class="rpe-row mt-8" id="ns-rpe-row">
+          <button class="rpe-btn" onclick="selRpe('ns',5)">5</button>
+          <button class="rpe-btn" onclick="selRpe('ns',6)">6</button>
+          <button class="rpe-btn sel" onclick="selRpe('ns',7)">7</button>
+          <button class="rpe-btn" onclick="selRpe('ns',8)">8</button>
+          <button class="rpe-btn" onclick="selRpe('ns',9)">9</button>
+        </div>
+      </div>
+    </div>
+    <div class="form-group"><label>Bloques / Ejercicios (uno por línea: nombre · reps · series · carga)</label>
+      <textarea id="ns-exercises" style="height:120px;" placeholder="Sentadilla búlgara · 6/lado · 3 series · KB 10-12kg&#10;Press landmine · 8/lado · 3 series · 10kg&#10;Bici de aire · 5×10&quot; máximo"></textarea>
+    </div>
+    <div class="form-group"><label>Links YouTube (uno por línea)</label>
+      <textarea id="ns-videos" style="height:70px;" placeholder="https://youtube.com/shorts/...&#10;https://youtube.com/shorts/..."></textarea>
+    </div>
+    <div class="form-group"><label>Indicaciones generales</label>
+      <textarea id="ns-notes" placeholder="Notas para el cliente sobre esta sesión..."></textarea>
+    </div>
+    <button class="btn btn-primary" style="width:100%;justify-content:center;" onclick="addSession()">Crear sesión</button>
+  </div>
+</div>
+
+<!-- NEW VALORACION -->
+<div class="modal-overlay" id="modal-new-val" role="dialog" aria-modal="true" aria-labelledby="new-val-title">
+  <div class="modal">
+    <div class="modal-header">
+      <h2 class="modal-title" id="new-val-title">Nueva valoración</h2>
+      <button class="modal-close" onclick="closeModal('modal-new-val')" aria-label="Cerrar">×</button>
+    </div>
+    <div class="grid-2">
+      <div class="form-group"><label>Cliente</label><select id="nv-client"></select></div>
+      <div class="form-group"><label>Fecha</label><input type="date" id="nv-date"></div>
+    </div>
+    <div class="grid-2">
+      <div class="form-group"><label>Test / Métrica</label><input type="text" id="nv-name" placeholder="Squat 1RM, VO₂Max, Wingate..."></div>
+      <div class="form-group"><label>Resultado</label><input type="text" id="nv-value" placeholder="102 kg, 48.4 ml..."></div>
+    </div>
+    <div class="form-group"><label>Categoría</label>
+      <select id="nv-cat">
+        <option>Fuerza</option>
+        <option>Aeróbico / Anaeróbico</option>
+        <option>Movilidad</option>
+        <option>Composición corporal</option>
+        <option>Funcional</option>
+        <option>Otro</option>
+      </select>
+    </div>
+    <div class="form-group" style="display:flex;align-items:center;justify-content:space-between;">
+      <label style="margin:0;">Visible para el cliente</label>
+      <label class="toggle"><input type="checkbox" id="nv-vis" checked><span class="toggle-track"></span></label>
+    </div>
+    <div class="form-group"><label>Notas</label><textarea id="nv-notes" placeholder="Observaciones..."></textarea></div>
+    <button class="btn btn-primary" style="width:100%;justify-content:center;" onclick="addValoracion()">Guardar resultado</button>
+  </div>
+</div>
+
+<!-- SESSION DETAIL (client view) -->
+<div class="modal-overlay" id="modal-session-detail" role="dialog" aria-modal="true" aria-labelledby="session-detail-title">
+  <div class="modal" style="max-height:95vh;">
+    <div class="modal-header">
+      <h2 class="modal-title" id="session-detail-title">Sesión</h2>
+      <button class="modal-close" onclick="closeModal('modal-session-detail')" aria-label="Cerrar">×</button>
+    </div>
+    <div id="session-detail-body"></div>
+  </div>
+</div>
+
+<!-- REGISTER RPE (after session) -->
+<div class="modal-overlay" id="modal-register" role="dialog" aria-modal="true" aria-labelledby="register-title">
+  <div class="modal">
+    <div class="modal-header">
+      <h2 class="modal-title" id="register-title">Registrar sesión</h2>
+      <button class="modal-close" onclick="closeModal('modal-register')" aria-label="Cerrar">×</button>
+    </div>
+    <input type="hidden" id="reg-session-id">
+    <div class="form-group">
+      <label>RPE real</label>
+      <div class="rpe-row mt-8" id="reg-rpe-row">
+        <button class="rpe-btn" onclick="selRpe('reg',5)">5</button>
+        <button class="rpe-btn" onclick="selRpe('reg',6)">6</button>
+        <button class="rpe-btn sel" onclick="selRpe('reg',7)">7</button>
+        <button class="rpe-btn" onclick="selRpe('reg',8)">8</button>
+        <button class="rpe-btn" onclick="selRpe('reg',9)">9</button>
+      </div>
+    </div>
+    <div class="form-group">
+      <div class="wellness-label-row"><span class="wellness-name">Sueño</span><span class="wellness-val" id="reg-sleep-val">7</span></div>
+      <input type="range" min="1" max="10" value="7" oninput="document.getElementById('reg-sleep-val').textContent=this.value">
+      <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--text3);margin-top:2px;"><span>Malo</span><span>Genial</span></div>
+    </div>
+    <div class="form-group">
+      <div class="wellness-label-row"><span class="wellness-name">Fatiga muscular</span><span class="wellness-val" id="reg-fat-val">4</span></div>
+      <input type="range" min="1" max="10" value="4" oninput="document.getElementById('reg-fat-val').textContent=this.value">
+      <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--text3);margin-top:2px;"><span>Ninguna</span><span>Mucha</span></div>
+    </div>
+    <div class="form-group">
+      <div class="wellness-label-row"><span class="wellness-name">Dolor / molestia</span><span class="wellness-val" id="reg-pain-val">2</span></div>
+      <input type="range" min="1" max="10" value="2" oninput="document.getElementById('reg-pain-val').textContent=this.value">
+      <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--text3);margin-top:2px;"><span>Nada</span><span>Mucho</span></div>
+    </div>
+    <div class="form-group"><label>Cargas usadas</label><input type="text" id="reg-loads" placeholder="Ej: Sentadilla 12kg, Press 10kg..."></div>
+    <div class="form-group"><label>Notas del cliente</label><textarea id="reg-notes" placeholder="¿Cómo fue? ¿Algo que comentar?"></textarea></div>
+    <button class="btn btn-primary" style="width:100%;justify-content:center;" onclick="saveRegistro()">Guardar sesión</button>
+  </div>
+</div>
+
+<!-- NEW OBJETIVO -->
+<div class="modal-overlay" id="modal-new-obj" role="dialog" aria-modal="true" aria-labelledby="new-obj-title">
+  <div class="modal">
+    <div class="modal-header">
+      <h2 class="modal-title" id="new-obj-title">Nuevo objetivo</h2>
+      <button class="modal-close" onclick="closeModal('modal-new-obj')" aria-label="Cerrar">×</button>
+    </div>
+    <input type="hidden" id="no-client-id">
+    <div class="form-group"><label>Objetivo</label><input type="text" id="no-title" placeholder="Squat 1RM → 110 kg"></div>
+    <div class="grid-2">
+      <div class="form-group"><label>Valor inicial</label><input type="text" id="no-start" placeholder="94 kg"></div>
+      <div class="form-group"><label>Valor meta</label><input type="text" id="no-target" placeholder="110 kg"></div>
+    </div>
+    <div class="form-group"><label>Valor actual</label><input type="text" id="no-current" placeholder="98 kg"></div>
+    <div class="grid-2">
+      <div class="form-group"><label>Tipo</label>
+        <select id="no-type">
+          <option value="deadline">Con fecha límite</option>
+          <option value="continuous">Continuo (sin fecha)</option>
+        </select>
+      </div>
+      <div class="form-group"><label>Fecha límite (si aplica)</label><input type="date" id="no-date"></div>
+    </div>
+    <div class="form-group" style="display:flex;align-items:center;justify-content:space-between;">
+      <label style="margin:0;">Visible para el cliente</label>
+      <label class="toggle"><input type="checkbox" id="no-vis" checked><span class="toggle-track"></span></label>
+    </div>
+    <button class="btn btn-primary" style="width:100%;justify-content:center;" onclick="addObjetivo()">Guardar objetivo</button>
+  </div>
+</div>
+
+<!-- NEW PLAN NUTRICIONAL -->
+<div class="modal-overlay" id="modal-new-plan" role="dialog" aria-modal="true" aria-labelledby="new-plan-title">
+  <div class="modal" style="max-height:92vh;">
+    <div class="modal-header">
+      <h2 class="modal-title" id="new-plan-title">Nuevo plan nutricional</h2>
+      <button class="modal-close" onclick="closeModal('modal-new-plan')" aria-label="Cerrar">×</button>
+    </div>
+    <div class="grid-2">
+      <div class="form-group"><label>Cliente</label><select id="np-client"></select></div>
+      <div class="form-group"><label>Nombre del plan</label><input type="text" id="np-name" placeholder="Plan de volumen, Definición..."></div>
+    </div>
+    <div class="grid-2">
+      <div class="form-group"><label>Fecha inicio</label><input type="date" id="np-date"></div>
+      <div class="form-group"><label>Objetivo nutricional</label>
+        <select id="np-goal">
+          <option>Pérdida de grasa</option><option>Ganancia muscular</option>
+          <option>Mantenimiento</option><option>Rendimiento deportivo</option><option>Otro</option>
+        </select>
+      </div>
+    </div>
+    <div class="section-label" style="margin-top:4px;">Macros diarios objetivo</div>
+    <div class="grid-4" style="gap:8px;margin-bottom:14px;">
+      <div class="form-group" style="margin:0;"><label>Kcal</label><input type="number" id="np-kcal" placeholder="2400"></div>
+      <div class="form-group" style="margin:0;"><label>Proteína (g)</label><input type="number" id="np-prot" placeholder="180"></div>
+      <div class="form-group" style="margin:0;"><label>HC (g)</label><input type="number" id="np-hc" placeholder="280"></div>
+      <div class="form-group" style="margin:0;"><label>Grasa (g)</label><input type="number" id="np-fat" placeholder="70"></div>
+    </div>
+    <div class="form-group"><label>Número de comidas al día</label>
+      <select id="np-meals">
+        <option value="3">3 comidas</option><option value="4">4 comidas</option>
+        <option value="5">5 comidas</option><option value="6">6 comidas</option>
+      </select>
+    </div>
+    <div id="np-meals-container"></div>
+    <div class="form-group"><label>Notas / indicaciones generales</label>
+      <textarea id="np-notes" placeholder="Hidratación, suplementación, timing precompetición..."></textarea>
+    </div>
+    <div class="form-group" style="display:flex;align-items:center;justify-content:space-between;">
+      <label style="margin:0;">Visible para el cliente</label>
+      <label class="toggle"><input type="checkbox" id="np-vis" checked><span class="toggle-track"></span></label>
+    </div>
+    <button class="btn btn-primary" style="width:100%;justify-content:center;" onclick="addPlan()">Guardar plan</button>
+  </div>
+</div>
+
+<!-- EDIT PLAN -->
+<div class="modal-overlay" id="modal-edit-plan" role="dialog" aria-modal="true" aria-labelledby="edit-plan-title">
+  <div class="modal" style="max-height:92vh;">
+    <div class="modal-header">
+      <h2 class="modal-title" id="edit-plan-title">Editar plan</h2>
+      <button class="modal-close" onclick="closeModal('modal-edit-plan')" aria-label="Cerrar">×</button>
+    </div>
+    <input type="hidden" id="ep-plan-id">
+    <input type="hidden" id="ep-client-id">
+    <div class="form-group"><label>Nombre del plan</label><input type="text" id="ep-name"></div>
+    <div class="section-label" style="margin-top:4px;">Macros diarios</div>
+    <div class="grid-4" style="gap:8px;margin-bottom:14px;">
+      <div class="form-group" style="margin:0;"><label>Kcal</label><input type="number" id="ep-kcal"></div>
+      <div class="form-group" style="margin:0;"><label>Proteína (g)</label><input type="number" id="ep-prot"></div>
+      <div class="form-group" style="margin:0;"><label>HC (g)</label><input type="number" id="ep-hc"></div>
+      <div class="form-group" style="margin:0;"><label>Grasa (g)</label><input type="number" id="ep-fat"></div>
+    </div>
+    <div class="form-group"><label>Notas</label><textarea id="ep-notes"></textarea></div>
+    <div class="form-group" style="display:flex;align-items:center;justify-content:space-between;">
+      <label style="margin:0;">Visible para el cliente</label>
+      <label class="toggle"><input type="checkbox" id="ep-vis"><span class="toggle-track"></span></label>
+    </div>
+    <div style="display:flex;gap:8px;">
+      <button class="btn btn-primary" style="flex:1;justify-content:center;" onclick="saveEditPlan()">Guardar cambios</button>
+      <button class="btn btn-danger btn-sm" onclick="deletePlan()"><i class="ti ti-trash" aria-hidden="true"></i></button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ===================== STATE =====================
+var state = {
+  clients: [
+    {id:1, name:'César', age:28, goal:'Rendimiento deportivo', micro:'Microciclo 1', color:'#a3e635', notes:'Sin lesiones conocidas. Alto rendimiento.',
+     sessions:[
+       {id:101,name:'Squat-Push',micro:'MC1',date:'2026-05-19',rpeTarget:7,exercises:'Prep calentamiento · 8 reps · 2 series\nSentadilla goblet · 4×15\" · 2 series\nSentadilla búlgara · 6/lado · 3 series · KB 10-12kg\nPress landmine · 8/lado · 3 series · 10kg\nBici de aire · 5×10\" máximo',videos:'https://youtube.com/shorts/Z0S4_REU7eE\nhttps://youtube.com/shorts/Xk0yl6H9n-g\nhttps://youtube.com/shorts/KTSzTj-Q5bY',notes:'Esta sesión arranca el microciclo. Orienta los pesos el primer día.',done:true,rpe:7,sleep:8,fatigue:3,pain:1,loads:'KB 12kg, Press 10kg',clientNotes:'Bien, el press me costó al final.'},
+       {id:102,name:'HT Push',micro:'MC1',date:'2026-05-22',rpeTarget:7,exercises:'Sentadilla búlgara · 6/lado · 3 series · KB 12kg\nPress vertical · 8 reps · 3 series\nBici de aire · 5×10\"',videos:'https://youtube.com/shorts/Xk0yl6H9n-g\nhttps://youtube.com/shorts/HzkHpIIo4IA',notes:'Aumenta el KB si el lunes fue bien.',done:false},
+       {id:103,name:'Sistemas energéticos',micro:'MC1',date:'2026-05-24',rpeTarget:8,exercises:'Wingate 30\" · 1 repetición · descanso 5min\nBici de aire · 5×10\"',videos:'',notes:'Anota los watios pico y media.',done:false}
+     ],
+     valoraciones:[
+       {id:201,date:'2026-05-12',name:'Squat 1RM',value:'102 kg',category:'Fuerza',visible:true,notes:''},
+       {id:202,date:'2026-05-12',name:'VO₂Max test 5min',value:'48.4 ml/kg/min',category:'Aeróbico / Anaeróbico',visible:true,notes:''},
+       {id:203,date:'2026-05-12',name:'Wingate — W pico',value:'684 W',category:'Aeróbico / Anaeróbico',visible:true,notes:''},
+       {id:204,date:'2026-05-12',name:'Wingate — W media',value:'481 W',category:'Aeróbico / Anaeróbico',visible:true,notes:''},
+       {id:205,date:'2026-02-10',name:'Squat 1RM',value:'94 kg',category:'Fuerza',visible:false,notes:''},
+       {id:206,date:'2026-02-10',name:'VO₂Max test 5min',value:'45.2 ml/kg/min',category:'Aeróbico / Anaeróbico',visible:false,notes:''},
+     ],
+     objetivos:[
+       {id:301,title:'Squat 1RM → 100 kg',start:'94',current:'102',target:'100',type:'deadline',date:'2026-06-30',visible:true},
+       {id:302,title:'VO₂Max → 52 ml/kg/min',start:'45.2',current:'48.4',target:'52',type:'deadline',date:'2026-10-31',visible:true},
+       {id:303,title:'Mantener RPE ≤ 7.5',start:'',current:'6.8',target:'7.5',type:'continuous',date:'',visible:true},
+     ],
+     planes:[
+       {id:501,name:'Plan rendimiento MC1',date:'2026-05-01',goal:'Rendimiento deportivo',kcal:2800,prot:200,hc:320,fat:75,meals:5,
+        comidas:[
+          {nombre:'Desayuno',hora:'08:00',alimentos:'Avena 80g + leche + plátano + 3 huevos revueltos + zumo naranja'},
+          {nombre:'Media mañana',hora:'11:00',alimentos:'Batido proteínas 30g + fruta + puñado almendras'},
+          {nombre:'Comida',hora:'14:00',alimentos:'Arroz 120g + pechuga 180g + verduras + AOVE 10ml'},
+          {nombre:'Pre-entreno',hora:'17:30',alimentos:'Tostada integral + jamón york + café'},
+          {nombre:'Cena',hora:'21:00',alimentos:'Salmón 150g + patata cocida 150g + ensalada'},
+        ],
+        notes:'Aumentar HC 50g en días de entreno. Hidratación mínima 3L. Creatina 5g/día.',visible:true}
+     ]
+    },
+    {id:2, name:'Laura', age:32, goal:'Pérdida de grasa', micro:'Microciclo 2', color:'#f472b6', notes:'Rodilla derecha sensible.',
+     sessions:[
+       {id:104,name:'Full body',micro:'MC2',date:'2026-05-20',rpeTarget:6,exercises:'Sentadilla goblet · 10 reps · 3 series\nRemo con mancuerna · 10/lado · 3 series\nPlancha · 3×30\"',videos:'',notes:'Empieza suave, rodilla.',done:true,rpe:6,sleep:7,fatigue:2,pain:2,loads:'Goblet 10kg',clientNotes:'Bien. Rodilla ok hoy.'},
+       {id:105,name:'Movilidad + fuerza',micro:'MC2',date:'2026-05-23',rpeTarget:6,exercises:'Movilidad cadera · 8/lado · 2 series\nSentadilla búlgara · 6/lado · 2 series · KB 8kg',videos:'',notes:'Prioriza el rango de movimiento.',done:false}
+     ],
+     valoraciones:[
+       {id:207,date:'2026-04-15',name:'Peso corporal',value:'72 kg',category:'Composición corporal',visible:true,notes:''},
+       {id:208,date:'2026-04-15',name:'Flexión cadera D',value:'110°',category:'Movilidad',visible:false,notes:'Limitación por rodilla.'},
+     ],
+     objetivos:[
+       {id:304,title:'Perder 5 kg de grasa',start:'75',current:'72',target:'70',type:'deadline',date:'2026-09-01',visible:true},
+     ],
+     planes:[
+       {id:401,name:'Déficit moderado',date:'2026-04-15',goal:'Pérdida de grasa',kcal:1900,prot:150,hc:180,fat:55,meals:4,
+        comidas:[
+          {nombre:'Desayuno',hora:'08:00',alimentos:'Avena 60g + leche desnatada 200ml + arándanos + 2 huevos revueltos'},
+          {nombre:'Comida',hora:'13:30',alimentos:'Arroz integral 80g + pechuga pollo 150g + verduras al vapor + AOVE'},
+          {nombre:'Merienda',hora:'17:00',alimentos:'Yogur 0% 200g + nueces 20g + manzana'},
+          {nombre:'Cena',hora:'20:30',alimentos:'Salmón 150g + batata 100g + ensalada verde'},
+        ],
+        notes:'Hidratar mínimo 2.5L. Ajustar HC arriba en días de entreno.',visible:true}
+     ]
+    }
+  ],
+  selectedValClient: 1,
+  selectedNutriClient: 1,
+  rpeSelections: {ns:7, reg:7},
+  charts: {}
+};
+
+// ===================== NAVIGATION =====================
+function nav(page) {
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.sidebar-nav-item').forEach(b=>b.classList.remove('active'));
+  document.getElementById('page-'+page).classList.add('active');
+  var nb = document.getElementById('nav-'+page);
+  if(nb) nb.classList.add('active');
+  renderPage(page);
+}
+
+function renderPage(page) {
+  if(page==='dashboard') renderDashboard();
+  if(page==='clients') renderClients();
+  if(page==='sessions') renderSessions();
+  if(page==='valoraciones') renderValoraciones();
+  if(page==='carga') renderCarga();
+  if(page==='nutricion') renderNutricion();
+}
+
+// ===================== NUTRICIÓN =====================
+function renderNutricion() {
+  var sel = document.getElementById('nutri-client-selector');
+  sel.innerHTML = state.clients.map(c=>`
+    <button class="btn ${state.selectedNutriClient===c.id?'btn-primary':'btn-ghost'} btn-sm" onclick="selectNutriClient(${c.id})">${c.name}</button>
+  `).join('');
+  renderNutriContent();
+}
+
+function selectNutriClient(id) { state.selectedNutriClient=id; renderNutricion(); }
+
+function renderNutriContent() {
+  var c = state.clients.find(cl=>cl.id===state.selectedNutriClient);
+  if(!c) return;
+  if(!c.planes) c.planes=[];
+  var el = document.getElementById('nutri-content');
+  if(!c.planes.length) {
+    el.innerHTML = `<div class="empty-state card"><i class="ti ti-apple" style="font-size:36px;margin-bottom:12px;display:block;color:var(--text3);"></i><p style="margin-bottom:16px;">Sin planes nutricionales para ${c.name}</p><button class="btn btn-primary" onclick="preselectNutriClient(${c.id});showModal('modal-new-plan')"><i class="ti ti-plus"></i> Crear primer plan</button></div>`;
+    return;
+  }
+  el.innerHTML = c.planes.map(p=>`
+    <div class="card mb-8">
+      <div class="flex-between mb-12">
+        <div>
+          <div style="font-size:16px;font-weight:600;font-family:'Syne',sans-serif;">${p.name}</div>
+          <div style="font-size:12px;color:var(--text3);margin-top:2px;">${p.goal} · Desde ${formatDate(p.date)}</div>
+        </div>
+        <div style="display:flex;gap:8px;align-items:center;">
+          <span class="badge ${p.visible?'badge-green':'badge-gray'}">${p.visible?'Visible':'Oculto'}</span>
+          <button class="btn btn-ghost btn-sm" onclick="openEditPlan(${c.id},${p.id})"><i class="ti ti-pencil" aria-hidden="true"></i></button>
+        </div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:16px;">
+        <div style="background:var(--bg3);border-radius:var(--r-sm);padding:12px;text-align:center;">
+          <div style="font-size:10px;color:var(--text3);font-family:'DM Mono',monospace;margin-bottom:4px;">KCAL</div>
+          <div style="font-size:20px;font-weight:700;font-family:'Syne',sans-serif;color:var(--accent);">${p.kcal}</div>
+        </div>
+        <div style="background:var(--bg3);border-radius:var(--r-sm);padding:12px;text-align:center;">
+          <div style="font-size:10px;color:var(--text3);font-family:'DM Mono',monospace;margin-bottom:4px;">PROT</div>
+          <div style="font-size:20px;font-weight:700;font-family:'Syne',sans-serif;color:var(--blue);">${p.prot}g</div>
+        </div>
+        <div style="background:var(--bg3);border-radius:var(--r-sm);padding:12px;text-align:center;">
+          <div style="font-size:10px;color:var(--text3);font-family:'DM Mono',monospace;margin-bottom:4px;">HC</div>
+          <div style="font-size:20px;font-weight:700;font-family:'Syne',sans-serif;color:var(--amber);">${p.hc}g</div>
+        </div>
+        <div style="background:var(--bg3);border-radius:var(--r-sm);padding:12px;text-align:center;">
+          <div style="font-size:10px;color:var(--text3);font-family:'DM Mono',monospace;margin-bottom:4px;">GRASA</div>
+          <div style="font-size:20px;font-weight:700;font-family:'Syne',sans-serif;color:var(--red);">${p.fat}g</div>
+        </div>
+      </div>
+
+      ${p.comidas&&p.comidas.length ? `
+      <div class="section-label" style="margin-top:0;">Distribución de comidas</div>
+      ${p.comidas.map((m,i)=>`
+        <div style="display:flex;align-items:flex-start;gap:12px;padding:10px 0;border-bottom:1px solid var(--border);${i===p.comidas.length-1?'border-bottom:none;padding-bottom:0;':''}">
+          <div style="background:var(--accent-dim);border:0.5px solid var(--accent-border);border-radius:var(--r-xs);padding:4px 8px;min-width:52px;text-align:center;flex-shrink:0;">
+            <div style="font-size:10px;color:var(--accent);font-family:'DM Mono',monospace;">${m.hora}</div>
+          </div>
+          <div style="flex:1;">
+            <div style="font-size:13px;font-weight:500;margin-bottom:2px;">${m.nombre}</div>
+            <div style="font-size:12px;color:var(--text2);line-height:1.5;">${m.alimentos}</div>
+          </div>
+        </div>`).join('')}` : ''}
+
+      ${p.notes ? `<div style="background:rgba(245,158,11,0.06);border-left:2px solid var(--amber);border-radius:0 var(--r-xs) var(--r-xs) 0;padding:10px 14px;margin-top:14px;font-size:13px;color:#fcd34d;line-height:1.5;">📋 ${p.notes}</div>` : ''}
+    </div>
+  `).join('') + `<button class="btn btn-ghost btn-sm mt-8" onclick="preselectNutriClient(${c.id});showModal('modal-new-plan')"><i class="ti ti-plus" aria-hidden="true"></i> Añadir plan</button>`;
+}
+
+function preselectNutriClient(id) {
+  populateClientSelects();
+  var el = document.getElementById('np-client');
+  if(el) el.value = id;
+}
+
+function addPlan() {
+  var cid = parseInt(document.getElementById('np-client').value);
+  var c = state.clients.find(cl=>cl.id===cid);
+  if(!c) return;
+  if(!c.planes) c.planes=[];
+  var nMeals = parseInt(document.getElementById('np-meals').value)||4;
+  var comidas = [];
+  for(var i=0;i<nMeals;i++) {
+    var horaEl = document.getElementById('np-hora-'+i);
+    var nomEl = document.getElementById('np-comida-'+i);
+    var alimEl = document.getElementById('np-alim-'+i);
+    comidas.push({
+      nombre: nomEl?nomEl.value:'Comida '+(i+1),
+      hora: horaEl?horaEl.value:'',
+      alimentos: alimEl?alimEl.value:''
+    });
+  }
+  c.planes.push({
+    id: Date.now(),
+    name: document.getElementById('np-name').value||'Plan nutricional',
+    date: document.getElementById('np-date').value||new Date().toISOString().split('T')[0],
+    goal: document.getElementById('np-goal').value,
+    kcal: parseInt(document.getElementById('np-kcal').value)||0,
+    prot: parseInt(document.getElementById('np-prot').value)||0,
+    hc: parseInt(document.getElementById('np-hc').value)||0,
+    fat: parseInt(document.getElementById('np-fat').value)||0,
+    meals: nMeals,
+    comidas,
+    notes: document.getElementById('np-notes').value,
+    visible: document.getElementById('np-vis').checked
+  });
+  closeModal('modal-new-plan');
+  toast('Plan nutricional guardado ✓');
+  state.selectedNutriClient = cid;
+  nav('nutricion');
+}
+
+function openEditPlan(cid, pid) {
+  var c = state.clients.find(cl=>cl.id===cid);
+  var p = c.planes.find(pl=>pl.id===pid);
+  document.getElementById('ep-plan-id').value = pid;
+  document.getElementById('ep-client-id').value = cid;
+  document.getElementById('ep-name').value = p.name;
+  document.getElementById('ep-kcal').value = p.kcal;
+  document.getElementById('ep-prot').value = p.prot;
+  document.getElementById('ep-hc').value = p.hc;
+  document.getElementById('ep-fat').value = p.fat;
+  document.getElementById('ep-notes').value = p.notes||'';
+  document.getElementById('ep-vis').checked = p.visible;
+  showModal('modal-edit-plan');
+}
+
+function saveEditPlan() {
+  var cid = parseInt(document.getElementById('ep-client-id').value);
+  var pid = parseInt(document.getElementById('ep-plan-id').value);
+  var c = state.clients.find(cl=>cl.id===cid);
+  var p = c.planes.find(pl=>pl.id===pid);
+  p.name = document.getElementById('ep-name').value;
+  p.kcal = parseInt(document.getElementById('ep-kcal').value)||0;
+  p.prot = parseInt(document.getElementById('ep-prot').value)||0;
+  p.hc = parseInt(document.getElementById('ep-hc').value)||0;
+  p.fat = parseInt(document.getElementById('ep-fat').value)||0;
+  p.notes = document.getElementById('ep-notes').value;
+  p.visible = document.getElementById('ep-vis').checked;
+  closeModal('modal-edit-plan');
+  toast('Plan actualizado ✓');
+  renderNutriContent();
+}
+
+function deletePlan() {
+  if(!confirm('¿Eliminar este plan?')) return;
+  var cid = parseInt(document.getElementById('ep-client-id').value);
+  var pid = parseInt(document.getElementById('ep-plan-id').value);
+  var c = state.clients.find(cl=>cl.id===cid);
+  c.planes = c.planes.filter(p=>p.id!==pid);
+  closeModal('modal-edit-plan');
+  toast('Plan eliminado');
+  renderNutriContent();
+}
+
+// Dynamic meal fields in new plan modal
+document.getElementById('np-meals').addEventListener('change', function() {
+  renderMealFields(parseInt(this.value));
+});
+
+function renderMealFields(n) {
+  var defaults = ['Desayuno','Media mañana','Comida','Merienda','Pre-entreno','Cena'];
+  var hours = ['08:00','11:00','14:00','17:00','18:30','21:00'];
+  var html = '';
+  for(var i=0;i<n;i++) {
+    html += `<div style="background:var(--bg3);border-radius:var(--r-sm);padding:12px;margin-bottom:8px;">
+      <div class="grid-2" style="gap:8px;margin-bottom:8px;">
+        <div><label style="font-size:11px;">Nombre</label><input type="text" id="np-comida-${i}" value="${defaults[i]||'Comida '+(i+1)}" style="padding:6px 10px;font-size:13px;"></div>
+        <div><label style="font-size:11px;">Hora</label><input type="time" id="np-hora-${i}" value="${hours[i]||'12:00'}" style="padding:6px 10px;font-size:13px;"></div>
+      </div>
+      <label style="font-size:11px;">Alimentos</label>
+      <input type="text" id="np-alim-${i}" placeholder="Ej: Avena 60g + leche + plátano..." style="font-size:13px;">
+    </div>`;
+  }
+  document.getElementById('np-meals-container').innerHTML = html;
+}
+
+// Init meal fields when modal opens
+var _npModalObs = new MutationObserver(function(muts) {
+  muts.forEach(function(m) {
+    if(m.target.id==='modal-new-plan' && m.target.classList.contains('open')) {
+      var n = parseInt(document.getElementById('np-meals').value)||4;
+      if(!document.getElementById('np-comida-0')) renderMealFields(n);
+    }
+  });
+});
+_npModalObs.observe(document.getElementById('modal-new-plan'), {attributes:true, attributeFilter:['class']});
+
+// ===================== DASHBOARD =====================
+function renderDashboard() {
+  var allSessions = state.clients.flatMap(c=>c.sessions);
+  var done = allSessions.filter(s=>s.done).length;
+  var pending = allSessions.filter(s=>!s.done).length;
+  var rpes = allSessions.filter(s=>s.done&&s.rpe).map(s=>s.rpe);
+  var avgRpe = rpes.length ? (rpes.reduce((a,b)=>a+b,0)/rpes.length).toFixed(1) : '—';
+  var wellAll = allSessions.filter(s=>s.done&&s.sleep).map(s=>s.sleep);
+  var avgWell = wellAll.length ? (wellAll.reduce((a,b)=>a+b,0)/wellAll.length).toFixed(1) : '—';
+
+  document.getElementById('dash-metrics').innerHTML = `
+    <div class="metric-card"><div class="metric-label">Clientes</div><div class="metric-val" style="color:var(--accent)">${state.clients.length}</div><div class="metric-sub">activos</div></div>
+    <div class="metric-card"><div class="metric-label">Sesiones hechas</div><div class="metric-val" style="color:var(--green)">${done}</div><div class="metric-sub">esta semana</div></div>
+    <div class="metric-card"><div class="metric-label">RPE medio</div><div class="metric-val" style="color:var(--amber)">${avgRpe}</div><div class="metric-sub">todas las sesiones</div></div>
+    <div class="metric-card"><div class="metric-label">Wellness medio</div><div class="metric-val" style="color:var(--green)">${avgWell}</div><div class="metric-sub">sueño promedio</div></div>
+  `;
+
+  var recent = allSessions.filter(s=>s.done).slice(-4).reverse();
+  document.getElementById('dash-activity').innerHTML = recent.length ? recent.map(s=>{
+    var c = state.clients.find(cl=>cl.sessions.some(ss=>ss.id===s.id));
+    return `<div class="card card-sm mb-8" style="display:flex;align-items:center;gap:10px;">
+      <div class="avatar" style="width:34px;height:34px;font-size:12px;background:${c.color}22;color:${c.color};">${initials(c.name)}</div>
+      <div style="flex:1;"><div style="font-size:13px;font-weight:500;">${s.name}</div><div style="font-size:11px;color:var(--text3);">${c.name} · ${formatDate(s.date)}</div></div>
+      <span class="badge ${rpeColor(s.rpe)}">RPE ${s.rpe}</span>
+    </div>`;
+  }).join('') : '<div class="empty-state"><i class="ti ti-calendar-off"></i><p>Sin actividad reciente</p></div>';
+
+  var alerts = [];
+  state.clients.forEach(c=>{
+    c.sessions.filter(s=>s.done&&s.pain>5).forEach(s=>alerts.push(`<div class="card card-sm mb-8" style="border-color:var(--rborder);background:var(--rdim)"><div style="font-size:13px;color:var(--red);font-weight:500;">⚠ ${c.name} — dolor ${s.pain}/10</div><div style="font-size:11px;color:var(--text3);">${s.name} · ${formatDate(s.date)}</div></div>`));
+    c.sessions.filter(s=>s.done&&s.rpe>s.rpeTarget+1).forEach(s=>alerts.push(`<div class="card card-sm mb-8" style="border-color:var(--aborder);background:var(--adim)"><div style="font-size:13px;color:var(--amber);font-weight:500;">↑ ${c.name} — RPE ${s.rpe} (obj. ${s.rpeTarget})</div><div style="font-size:11px;color:var(--text3);">${s.name}</div></div>`));
+  });
+  document.getElementById('dash-alerts').innerHTML = alerts.length ? alerts.join('') : '<div class="card card-sm" style="color:var(--text3);font-size:13px;">Sin alertas 🎉</div>';
+
+  var today = allSessions.filter(s=>!s.done).slice(0,3);
+  document.getElementById('dash-today').innerHTML = today.length ? today.map(s=>{
+    var c = state.clients.find(cl=>cl.sessions.some(ss=>ss.id===s.id));
+    return `<div class="card card-sm mb-8" style="display:flex;align-items:center;gap:10px;">
+      <div class="avatar" style="width:34px;height:34px;font-size:12px;background:${c.color}22;color:${c.color};">${initials(c.name)}</div>
+      <div style="flex:1;"><div style="font-size:13px;font-weight:500;">${s.name}</div><div style="font-size:11px;color:var(--text3);">${c.name} · ${formatDate(s.date)}</div></div>
+      <span class="badge badge-gray">Pendiente</span>
+    </div>`;
+  }).join('') : '<div class="card card-sm" style="color:var(--text3);font-size:13px;">Todo completado ✓</div>';
+}
+
+// ===================== CLIENTS =====================
+function renderClients() {
+  document.getElementById('clients-count').textContent = `${state.clients.length} clientes activos`;
+  document.getElementById('clients-list').innerHTML = state.clients.map(c=>{
+    var done = c.sessions.filter(s=>s.done).length;
+    var total = c.sessions.length;
+    var rpes = c.sessions.filter(s=>s.done&&s.rpe).map(s=>s.rpe);
+    var avgRpe = rpes.length ? (rpes.reduce((a,b)=>a+b,0)/rpes.length).toFixed(1) : '—';
+    var lastSess = c.sessions.filter(s=>s.done).pop();
+    return `<div class="client-card mb-8" onclick="openClient(${c.id})" role="button" tabindex="0" aria-label="Ver perfil de ${c.name}">
+      <div class="avatar" style="background:${c.color}22;color:${c.color};">${initials(c.name)}</div>
+      <div class="client-info">
+        <div class="client-name">${c.name}</div>
+        <div class="client-meta">${c.goal} · ${c.micro}${lastSess?` · Última sesión: ${formatDate(lastSess.date)}':''}</div>
+      </div>
+      <div class="client-stats">
+        <div class="client-stat"><div class="client-stat-val">${done}/${total}</div><div class="client-stat-label">sesiones</div></div>
+        <div class="client-stat"><div class="client-stat-val" style="color:var(--amber)">${avgRpe}</div><div class="client-stat-label">RPE med.</div></div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function openClient(id) {
+  state.openClientId = id;
+  nav('client-detail');
+  renderClientDetail(id);
+}
+
+function renderClientDetail(id) {
+  var c = state.clients.find(cl=>cl.id===id);
+  if(!c) return;
+  var rpes = c.sessions.filter(s=>s.done&&s.rpe).map(s=>s.rpe);
+  var avgRpe = rpes.length ? (rpes.reduce((a,b)=>a+b,0)/rpes.length).toFixed(1) : '—';
+  var sleeps = c.sessions.filter(s=>s.done&&s.sleep).map(s=>s.sleep);
+  var avgSleep = sleeps.length ? (sleeps.reduce((a,b)=>a+b,0)/sleeps.length).toFixed(1) : '—';
+  var done = c.sessions.filter(s=>s.done).length;
+
+  var html = `
+  <div style="display:flex;align-items:center;gap:16px;margin-bottom:20px;">
+    <div class="avatar" style="width:52px;height:52px;font-size:18px;background:${c.color}22;color:${c.color};">${initials(c.name)}</div>
+    <div style="flex:1;">
+      <h2 class="page-title" style="font-size:22px;">${c.name}</h2>
+      <p style="font-size:13px;color:var(--text2);">${c.age} años · ${c.goal} · ${c.micro}</p>
+    </div>
+    <button class="btn btn-ghost btn-sm" onclick="showModal('modal-new-session');preselectClient(${c.id})"><i class="ti ti-plus" aria-hidden="true"></i> Sesión</button>
+    <button class="btn btn-ghost btn-sm" onclick="document.getElementById('no-client-id').value=${c.id};showModal('modal-new-obj')"><i class="ti ti-target" aria-hidden="true"></i> Objetivo</button>
+  </div>
+  <div class="grid-4 mb-12">
+    <div class="metric-card"><div class="metric-label">Sesiones</div><div class="metric-val" style="color:var(--accent)">${done}/${c.sessions.length}</div></div>
+    <div class="metric-card"><div class="metric-label">RPE medio</div><div class="metric-val" style="color:var(--amber)">${avgRpe}</div></div>
+    <div class="metric-card"><div class="metric-label">Sueño medio</div><div class="metric-val" style="color:var(--green)">${avgSleep}</div></div>
+    <div class="metric-card"><div class="metric-label">Objetivos</div><div class="metric-val">${c.objetivos.length}</div></div>
+  </div>
+  <div class="tab-row" id="detail-tabs">
+    <button class="tab-btn on" onclick="detailTab('sesiones',${c.id})">Sesiones</button>
+    <button class="tab-btn" onclick="detailTab('valoraciones',${c.id})">Valoraciones</button>
+    <button class="tab-btn" onclick="detailTab('objetivos',${c.id})">Objetivos</button>
+    <button class="tab-btn" onclick="detailTab('evolucion',${c.id})">Evolución</button>
+  </div>
+  <div id="detail-tab-content"></div>`;
+
+  document.getElementById('client-detail-content').innerHTML = html;
+  detailTab('sesiones', id);
+}
+
+function detailTab(tab, id) {
+  var c = state.clients.find(cl=>cl.id===id);
+  document.querySelectorAll('#detail-tabs .tab-btn').forEach((b,i)=>{
+    b.classList.toggle('on', ['sesiones','valoraciones','objetivos','evolucion'][i]===tab);
+  });
+  var el = document.getElementById('detail-tab-content');
+  if(tab==='sesiones') {
+    el.innerHTML = c.sessions.slice().reverse().map(s=>`
+      <div class="session-card">
+        <div class="session-header">
+          <div>
+            <div class="session-title">${s.name}</div>
+            <div class="session-meta">${formatDate(s.date)} · ${s.micro} · RPE obj. ${s.rpeTarget}</div>
+          </div>
+          <div style="display:flex;gap:6px;align-items:center;">
+            ${s.done ? `<span class="badge badge-green">✓ RPE ${s.rpe}</span>` : `<span class="badge badge-gray">Pendiente</span>`}
+            <button class="btn btn-ghost btn-sm" onclick="openSessionDetail(${s.id})"><i class="ti ti-eye" aria-hidden="true"></i></button>
+          </div>
+        </div>
+        ${s.done ? `<div style="display:flex;gap:10px;flex-wrap:wrap;">
+          <span style="font-size:12px;color:var(--text3);">Sueño ${s.sleep}/10</span>
+          <span style="font-size:12px;color:var(--text3);">Fatiga ${s.fatigue}/10</span>
+          <span style="font-size:12px;color:var(--text3);">Dolor ${s.pain}/10</span>
+          ${s.loads?`<span style="font-size:12px;color:var(--text2);">${s.loads}</span>`:''}
+        </div>
+        ${s.clientNotes?`<div class="note-box mt-8">"${s.clientNotes}"</div>`:''}` : ''}
+      </div>`).join('') || '<div class="empty-state"><i class="ti ti-calendar"></i><p>Sin sesiones aún</p></div>';
+  }
+  if(tab==='valoraciones') {
+    var cats = [...new Set(c.valoraciones.map(v=>v.category))];
+    el.innerHTML = `<button class="btn btn-ghost btn-sm mb-12" onclick="preselectValClient(${c.id});showModal('modal-new-val')"><i class="ti ti-plus" aria-hidden="true"></i> Añadir resultado</button>` +
+    (cats.length ? cats.map(cat=>`
+      <div class="section-label">${cat}</div>
+      <div class="card mb-8">
+        ${c.valoraciones.filter(v=>v.category===cat).map(v=>`
+          <div class="val-row">
+            <div style="flex:1;">
+              <div class="val-name">${v.name}</div>
+              <div style="font-size:11px;color:var(--text3);">${formatDate(v.date)}</div>
+            </div>
+            <div class="val-num">${v.value}</div>
+            <span class="vis-toggle ${v.visible?'on':''}" onclick="toggleValVis(${c.id},${v.id},this)">${v.visible?'Visible':'Oculto'}</span>
+          </div>`).join('')}
+      </div>`).join('') : '<div class="empty-state"><i class="ti ti-chart-bar"></i><p>Sin valoraciones aún</p></div>');
+  }
+  if(tab==='objetivos') {
+    el.innerHTML = `<button class="btn btn-ghost btn-sm mb-12" onclick="document.getElementById('no-client-id').value=${c.id};showModal('modal-new-obj')"><i class="ti ti-plus" aria-hidden="true"></i> Añadir objetivo</button>` +
+    (c.objetivos.length ? c.objetivos.map(o=>{
+      var pct = calcObjPct(o);
+      var status = getObjStatus(o, pct);
+      return `<div class="obj-card obj-${status.cls}">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;">
+          <p class="obj-title">${o.title}</p>
+          <div style="display:flex;gap:6px;align-items:center;">
+            <span class="badge badge-${status.badgeCls}">${status.label}</span>
+            <label class="toggle" title="Visible para el cliente"><input type="checkbox" ${o.visible?'checked':''} onchange="toggleObjVis(${c.id},${o.id},this)"><span class="toggle-track"></span></label>
+          </div>
+        </div>
+        <p class="obj-meta">${o.start?`Inicio: ${o.start} → `:``}Actual: ${o.current} · Meta: ${o.target}${o.date?` · Límite: ${formatDate(o.date)}`:' · Continuo'}</p>
+        <div class="progress-bar"><div class="progress-fill" style="width:${Math.min(pct,100)}%;background:${status.color}"></div></div>
+        <div class="obj-footer"><span class="obj-footer-label" style="color:${status.color}">${Math.round(pct)}%</span><span style="font-size:11px;color:var(--text3);">${o.type==='continuous'?'Continuo':o.date?formatDate(o.date):''}</span></div>
+      </div>`;
+    }).join('') : '<div class="empty-state"><i class="ti ti-target"></i><p>Sin objetivos aún</p></div>');
+  }
+  if(tab==='evolucion') {
+    el.innerHTML = `<div class="card mb-8"><div style="font-size:13px;font-weight:500;margin-bottom:12px;">Evolución RPE · ${c.name}</div><div class="chart-wrap"><canvas id="chart-detail-rpe"></canvas></div></div>
+    <div class="card"><div style="font-size:13px;font-weight:500;margin-bottom:12px;">Sueño · Fatiga · Dolor</div><div class="chart-wrap"><canvas id="chart-detail-well"></canvas></div></div>`;
+    setTimeout(()=>{
+      var doneSess = c.sessions.filter(s=>s.done);
+      var labels = doneSess.map(s=>s.name.split(' ')[0]);
+      initOrUpdateChart('chart-detail-rpe','line',{labels,datasets:[{label:'RPE',data:doneSess.map(s=>s.rpe),borderColor:'#a3e635',backgroundColor:'rgba(163,230,53,0.08)',tension:0.4,fill:true,pointRadius:5,pointBackgroundColor:'#a3e635'}]});
+      initOrUpdateChart('chart-detail-well','line',{labels,datasets:[
+        {label:'Sueño',data:doneSess.map(s=>s.sleep),borderColor:'#60a5fa',tension:0.4,fill:false,pointRadius:4},
+        {label:'Fatiga',data:doneSess.map(s=>s.fatigue),borderColor:'#f59e0b',tension:0.4,fill:false,pointRadius:4,borderDash:[4,3]},
+        {label:'Dolor',data:doneSess.map(s=>s.pain),borderColor:'#ef4444',tension:0.4,fill:false,pointRadius:4,borderDash:[2,4]}
+      ]});
+    },60);
+  }
+}
+
+// ===================== SESSIONS =====================
+function renderSessions() {
+  var fEl = document.getElementById('sessions-filter');
+  fEl.innerHTML = `<button class="btn ${state.sessFilter==='all'?'btn-primary':'btn-ghost'} btn-sm" onclick="setSessFilter('all')">Todas</button>` +
+    state.clients.map(c=>`<button class="btn ${state.sessFilter===c.id?'btn-primary':'btn-ghost'} btn-sm" onclick="setSessFilter(${c.id})">${c.name}</button>`).join('');
+
+  var allSess = state.clients.flatMap(c=>c.sessions.map(s=>({...s,client:c})));
+  if(state.sessFilter && state.sessFilter!=='all') allSess = allSess.filter(s=>s.client.id===state.sessFilter);
+  allSess.sort((a,b)=>b.date.localeCompare(a.date));
+
+  document.getElementById('sessions-list').innerHTML = allSess.length ? allSess.map(s=>`
+    <div class="session-card">
+      <div class="session-header">
+        <div>
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">
+            <div class="avatar" style="width:26px;height:26px;font-size:10px;background:${s.client.color}22;color:${s.client.color};">${initials(s.client.name)}</div>
+            <span style="font-size:12px;color:var(--text2);">${s.client.name}</span>
+          </div>
+          <div class="session-title">${s.name}</div>
+          <div class="session-meta">${formatDate(s.date)} · ${s.micro} · RPE obj. ${s.rpeTarget}</div>
+        </div>
+        <div style="display:flex;gap:6px;">
+          ${s.done ? `<span class="badge badge-green">✓ RPE ${s.rpe}</span>` : `<span class="badge badge-gray">Pendiente</span>`}
+          <button class="btn btn-ghost btn-sm" onclick="openSessionDetail(${s.id})" aria-label="Ver sesión ${s.name}"><i class="ti ti-eye" aria-hidden="true"></i></button>
+        </div>
+      </div>
+      <div class="chips">${s.exercises.split('\n').slice(0,3).map(e=>`<span class="chip">${e.split('·')[0].trim()}</span>`).join('')}${s.exercises.split('\n').length>3?`<span class="chip">+${s.exercises.split('\n').length-3} más</span>`:''}</div>
+    </div>`).join('') : '<div class="empty-state"><i class="ti ti-calendar"></i><p>Sin sesiones</p></div>';
+}
+
+function setSessFilter(f) { state.sessFilter=f; renderSessions(); }
+
+function openSessionDetail(sid) {
+  var s,c;
+  state.clients.forEach(cl=>{ var found=cl.sessions.find(ss=>ss.id===sid); if(found){s=found;c=cl;} });
+  if(!s) return;
+  var exLines = s.exercises.split('\n').filter(Boolean);
+  var vidLines = s.videos ? s.videos.split('\n').filter(Boolean) : [];
+  var html = `
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;">
+      <div class="avatar" style="background:${c.color}22;color:${c.color};">${initials(c.name)}</div>
+      <div><div style="font-size:15px;font-weight:500;">${c.name}</div><div style="font-size:12px;color:var(--text2);">${s.micro} · ${formatDate(s.date)}</div></div>
+      <span class="badge badge-accent ml-auto">RPE ${s.rpeTarget}</span>
+    </div>
+    ${s.notes?`<div class="note-box mb-12">${s.notes}</div>`:''}
+    <div class="section-label">Ejercicios</div>
+    ${exLines.map((e,i)=>{
+      var parts = e.split('·').map(p=>p.trim());
+      return `<div class="exercise-row">
+        <div style="flex:1;">
+          <div style="font-size:13px;font-weight:500;">${parts[0]}</div>
+          <div class="chips mt-8">${parts.slice(1).map(p=>`<span class="chip">${p}</span>`).join('')}</div>
+        </div>
+        ${vidLines[i]?`<a href="${vidLines[i]}" target="_blank" class="yt-link" aria-label="Ver vídeo ${parts[0]}"><i class="ti ti-brand-youtube" aria-hidden="true"></i> Ver</a>`:''}
+      </div>`;
+    }).join('')}
+    ${!s.done ? `
+    <hr>
+    <button class="btn btn-primary" style="width:100%;justify-content:center;margin-top:8px;" onclick="closeModal('modal-session-detail');openRegister(${s.id})">
+      <i class="ti ti-check" aria-hidden="true"></i> Registrar sesión completada
+    </button>` : `
+    <hr>
+    <div class="section-label">Registro completado</div>
+    <div class="grid-3" style="gap:8px;">
+      <div class="metric-card"><div class="metric-label">RPE</div><div class="metric-val" style="font-size:20px;color:var(--amber)">${s.rpe}</div></div>
+      <div class="metric-card"><div class="metric-label">Sueño</div><div class="metric-val" style="font-size:20px;">${s.sleep}</div></div>
+      <div class="metric-card"><div class="metric-label">Dolor</div><div class="metric-val" style="font-size:20px;color:${s.pain>5?'var(--red)':'var(--green)'}">${s.pain}</div></div>
+    </div>
+    ${s.loads?`<p style="font-size:13px;color:var(--text2);margin-top:10px;"><span style="color:var(--text3);">Cargas: </span>${s.loads}</p>`:''}
+    ${s.clientNotes?`<div class="note-box mt-8">"${s.clientNotes}"</div>`:''}
+    `}`;
+  document.getElementById('session-detail-title').textContent = s.name;
+  document.getElementById('session-detail-body').innerHTML = html;
+  showModal('modal-session-detail');
+}
+
+function openRegister(sid) {
+  document.getElementById('reg-session-id').value = sid;
+  showModal('modal-register');
+}
+
+function saveRegistro() {
+  var sid = parseInt(document.getElementById('reg-session-id').value);
+  var s,c;
+  state.clients.forEach(cl=>{ var f=cl.sessions.find(ss=>ss.id===sid); if(f){s=f;c=cl;} });
+  if(!s) return;
+  s.done = true;
+  s.rpe = state.rpeSelections.reg;
+  s.sleep = parseInt(document.querySelector('#modal-register input[type=range]:nth-of-type(1)').value);
+  s.fatigue = parseInt(document.querySelector('#modal-register input[type=range]:nth-of-type(2)').value);
+  s.pain = parseInt(document.querySelector('#modal-register input[type=range]:nth-of-type(3)').value);
+  s.loads = document.getElementById('reg-loads').value;
+  s.clientNotes = document.getElementById('reg-notes').value;
+  closeModal('modal-register');
+  toast('Sesión registrada ✓');
+  renderPage('sessions');
+}
+
+// ===================== VALORACIONES =====================
+function renderValoraciones() {
+  var sel = document.getElementById('val-client-selector');
+  sel.innerHTML = state.clients.map(c=>`
+    <button class="btn ${state.selectedValClient===c.id?'btn-primary':'btn-ghost'} btn-sm" onclick="selectValClient(${c.id})">${c.name}</button>
+  `).join('');
+  renderValContent();
+}
+
+function selectValClient(id) { state.selectedValClient=id; renderValoraciones(); }
+
+function renderValContent() {
+  var c = state.clients.find(cl=>cl.id===state.selectedValClient);
+  if(!c){document.getElementById('val-content').innerHTML='';return;}
+  var cats = [...new Set(c.valoraciones.map(v=>v.category))];
+  var html = `
+  <div class="tab-row" id="val-tabs">
+    <button class="tab-btn on" onclick="valTab('resultados')">Resultados</button>
+    <button class="tab-btn" onclick="valTab('objetivos')">Objetivos</button>
+  </div>
+  <div id="val-tab-content"></div>`;
+  document.getElementById('val-content').innerHTML = html;
+  valTab('resultados');
+}
+
+function valTab(tab) {
+  var c = state.clients.find(cl=>cl.id===state.selectedValClient);
+  document.querySelectorAll('#val-tabs .tab-btn').forEach((b,i)=>{
+    b.classList.toggle('on',['resultados','objetivos'][i]===tab);
+  });
+  var el = document.getElementById('val-tab-content');
+  if(tab==='resultados') {
+    var cats = [...new Set(c.valoraciones.map(v=>v.category))];
+    el.innerHTML = cats.length ? cats.map(cat=>`
+      <div class="section-label">${cat}</div>
+      <div class="card mb-8">
+        ${c.valoraciones.filter(v=>v.category===cat).map(v=>`
+          <div class="val-row">
+            <div style="flex:1;"><div class="val-name">${v.name}</div><div style="font-size:11px;color:var(--text3);">${formatDate(v.date)}</div></div>
+            <div class="val-num">${v.value}</div>
+            <span class="vis-toggle ${v.visible?'on':''}" onclick="toggleValVis(${c.id},${v.id},this)">${v.visible?'Visible':'Oculto'}</span>
+          </div>`).join('')}
+      </div>`).join('') + `<button class="btn btn-ghost btn-sm mt-8" onclick="preselectValClient(${c.id});showModal('modal-new-val')"><i class="ti ti-plus" aria-hidden="true"></i> Añadir resultado</button>`
+    : '<div class="empty-state"><i class="ti ti-chart-bar"></i><p>Sin valoraciones aún</p></div>';
+  }
+  if(tab==='objetivos') {
+    el.innerHTML = (c.objetivos.length ? c.objetivos.map(o=>{
+      var pct = calcObjPct(o);
+      var status = getObjStatus(o,pct);
+      return `<div class="obj-card obj-${status.cls}">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;">
+          <p class="obj-title">${o.title}</p>
+          <div style="display:flex;gap:6px;align-items:center;">
+            <span class="badge badge-${status.badgeCls}">${status.label}</span>
+            <label class="toggle"><input type="checkbox" ${o.visible?'checked':''} onchange="toggleObjVis(${c.id},${o.id},this)"><span class="toggle-track"></span></label>
+          </div>
+        </div>
+        <p class="obj-meta">${o.start?`Inicio: ${o.start} · `:''}Actual: ${o.current} · Meta: ${o.target}${o.date?` · Límite: ${formatDate(o.date)}`:' · Continuo'}</p>
+        <div class="progress-bar"><div class="progress-fill" style="width:${Math.min(pct,100)}%;background:${status.color}"></div></div>
+        <div class="obj-footer"><span class="obj-footer-label" style="color:${status.color}">${Math.round(pct)}% ${status.label}</span><span style="font-size:11px;color:var(--text3);">${o.type==='continuous'?'Continuo':formatDate(o.date)}</span></div>
+      </div>`;
+    }).join('') : '') + `<button class="btn btn-ghost btn-sm mt-8" onclick="document.getElementById('no-client-id').value=${c.id};showModal('modal-new-obj')"><i class="ti ti-plus" aria-hidden="true"></i> Añadir objetivo</button>`;
+  }
+}
+
+// ===================== CARGA =====================
+function renderCarga() {
+  var allDone = state.clients.flatMap(c=>c.sessions.filter(s=>s.done));
+  var rpes = allDone.map(s=>s.rpe).filter(Boolean);
+  var avgRpe = rpes.length?(rpes.reduce((a,b)=>a+b,0)/rpes.length).toFixed(1):'—';
+  var sleeps = allDone.map(s=>s.sleep).filter(Boolean);
+  var avgSleep = sleeps.length?(sleeps.reduce((a,b)=>a+b,0)/sleeps.length).toFixed(1):'—';
+  var pains = allDone.map(s=>s.pain).filter(Boolean);
+  var avgPain = pains.length?(pains.reduce((a,b)=>a+b,0)/pains.length).toFixed(1):'—';
+
+  document.getElementById('carga-metrics').innerHTML = `
+    <div class="metric-card"><div class="metric-label">Sesiones totales</div><div class="metric-val" style="color:var(--accent)">${allDone.length}</div></div>
+    <div class="metric-card"><div class="metric-label">RPE grupo</div><div class="metric-val" style="color:var(--amber)">${avgRpe}</div></div>
+    <div class="metric-card"><div class="metric-label">Sueño grupo</div><div class="metric-val" style="color:var(--green)">${avgSleep}</div></div>
+    <div class="metric-card"><div class="metric-label">Dolor grupo</div><div class="metric-val" style="color:${parseFloat(avgPain)>4?'var(--red)':'var(--green)'}">${avgPain}</div></div>
+  `;
+
+  setTimeout(()=>{
+    var clientRpes = state.clients.map(c=>{
+      var r=c.sessions.filter(s=>s.done&&s.rpe).map(s=>s.rpe);
+      return r.length?(r.reduce((a,b)=>a+b,0)/r.length).toFixed(1):0;
+    });
+    initOrUpdateChart('chart-rpe-clients','bar',{
+      labels:state.clients.map(c=>c.name),
+      datasets:[{data:clientRpes,backgroundColor:state.clients.map(c=>c.color+'66'),borderColor:state.clients.map(c=>c.color),borderWidth:1,borderRadius:6}]
+    },{scales:{y:{min:0,max:10}}});
+
+    initOrUpdateChart('chart-wellness-group','line',{
+      labels:['L','M','X','J','V'],
+      datasets:[{label:'Wellness',data:[7.2,6.8,7.5,7.1,7.4],borderColor:'#22c55e',backgroundColor:'rgba(34,197,94,0.08)',tension:0.4,fill:true,pointRadius:4,pointBackgroundColor:'#22c55e'}]
+    });
+
+    var cargaData = state.clients.map(c=>c.sessions.filter(s=>s.done).length * (parseFloat(clientRpes[state.clients.indexOf(c)])||7) * 10);
+    initOrUpdateChart('chart-load','bar',{
+      labels:state.clients.map(c=>c.name),
+      datasets:[{label:'Carga (UA)',data:cargaData,backgroundColor:state.clients.map(c=>c.color+'55'),borderColor:state.clients.map(c=>c.color),borderWidth:1,borderRadius:6}]
+    },{scales:{y:{beginAtZero:true}}});
+  },80);
+}
+
+// ===================== MODALS =====================
+function showModal(id) {
+  if(id==='modal-new-session') populateClientSelects();
+  if(id==='modal-new-val') populateClientSelects();
+  if(id==='modal-register') resetRanges();
+  document.getElementById(id).classList.add('open');
+}
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+document.querySelectorAll('.modal-overlay').forEach(o=>{ o.addEventListener('click',e=>{ if(e.target===o) o.classList.remove('open'); }); });
+
+function populateClientSelects() {
+  ['ns-client','nv-client','np-client'].forEach(id=>{
+    var el = document.getElementById(id);
+    if(el) el.innerHTML = state.clients.map(c=>`<option value="${c.id}">${c.name}</option>`).join('');
+  });
+}
+
+function preselectClient(id) {
+  populateClientSelects();
+  var el = document.getElementById('ns-client');
+  if(el) el.value = id;
+}
+
+function preselectValClient(id) {
+  populateClientSelects();
+  var el = document.getElementById('nv-client');
+  if(el) el.value = id;
+}
+
+function resetRanges() {
+  var ranges = document.querySelectorAll('#modal-register input[type=range]');
+  if(ranges[0]){ranges[0].value=7;document.getElementById('reg-sleep-val').textContent='7';}
+  if(ranges[1]){ranges[1].value=4;document.getElementById('reg-fat-val').textContent='4';}
+  if(ranges[2]){ranges[2].value=2;document.getElementById('reg-pain-val').textContent='2';}
+}
+
+// ===================== ACTIONS =====================
+function addClient() {
+  var name = document.getElementById('nc-name').value.trim();
+  if(!name){alert('Pon el nombre del cliente');return;}
+  var id = Date.now();
+  state.clients.push({
+    id, name,
+    age: parseInt(document.getElementById('nc-age').value)||25,
+    goal: document.getElementById('nc-goal').value,
+    micro: document.getElementById('nc-micro').value||'Microciclo 1',
+    color: document.getElementById('nc-color').value,
+    notes: document.getElementById('nc-notes').value,
+    sessions:[], valoraciones:[], objetivos:[]
+  });
+  closeModal('modal-new-client');
+  toast(`${name} añadido ✓`);
+  nav('clients');
+}
+
+function addSession() {
+  var cid = parseInt(document.getElementById('ns-client').value);
+  var c = state.clients.find(cl=>cl.id===cid);
+  if(!c) return;
+  var name = document.getElementById('ns-name').value.trim()||'Nueva sesión';
+  c.sessions.push({
+    id: Date.now(),
+    name, micro: document.getElementById('ns-micro').value||'MC',
+    date: document.getElementById('ns-date').value||new Date().toISOString().split('T')[0],
+    rpeTarget: state.rpeSelections.ns,
+    exercises: document.getElementById('ns-exercises').value,
+    videos: document.getElementById('ns-videos').value,
+    notes: document.getElementById('ns-notes').value,
+    done: false
+  });
+  closeModal('modal-new-session');
+  toast(`Sesión "${name}" creada para ${c.name} ✓`);
+  renderPage('sessions');
+}
+
+function addValoracion() {
+  var cid = parseInt(document.getElementById('nv-client').value);
+  var c = state.clients.find(cl=>cl.id===cid);
+  if(!c) return;
+  c.valoraciones.push({
+    id: Date.now(),
+    date: document.getElementById('nv-date').value||new Date().toISOString().split('T')[0],
+    name: document.getElementById('nv-name').value,
+    value: document.getElementById('nv-value').value,
+    category: document.getElementById('nv-cat').value,
+    visible: document.getElementById('nv-vis').checked,
+    notes: document.getElementById('nv-notes').value
+  });
+  closeModal('modal-new-val');
+  toast('Valoración guardada ✓');
+  renderValoraciones();
+}
+
+function addObjetivo() {
+  var cid = parseInt(document.getElementById('no-client-id').value) || state.clients[0].id;
+  var c = state.clients.find(cl=>cl.id===cid);
+  if(!c) return;
+  c.objetivos.push({
+    id: Date.now(),
+    title: document.getElementById('no-title').value,
+    start: document.getElementById('no-start').value,
+    current: document.getElementById('no-current').value,
+    target: document.getElementById('no-target').value,
+    type: document.getElementById('no-type').value,
+    date: document.getElementById('no-date').value,
+    visible: document.getElementById('no-vis').checked
+  });
+  closeModal('modal-new-obj');
+  toast('Objetivo añadido ✓');
+  renderPage('valoraciones');
+}
+
+function toggleValVis(cid, vid, el) {
+  var c = state.clients.find(cl=>cl.id===cid);
+  var v = c.valoraciones.find(val=>val.id===vid);
+  v.visible = !v.visible;
+  el.classList.toggle('on', v.visible);
+  el.textContent = v.visible?'Visible':'Oculto';
+}
+
+function toggleObjVis(cid, oid, checkbox) {
+  var c = state.clients.find(cl=>cl.id===cid);
+  var o = c.objetivos.find(ob=>ob.id===oid);
+  o.visible = checkbox.checked;
+}
+
+// ===================== RPE SELECTOR =====================
+function selRpe(prefix, val) {
+  state.rpeSelections[prefix] = val;
+  document.querySelectorAll(`#${prefix==='ns'?'ns':'reg'}-rpe-row .rpe-btn`).forEach(b=>{
+    b.classList.toggle('sel', parseInt(b.textContent)===val);
+  });
+}
+
+// ===================== OBJETIVOS HELPERS =====================
+function calcObjPct(o) {
+  var start = parseFloat(o.start)||0;
+  var target = parseFloat(o.target)||1;
+  var current = parseFloat(o.current)||0;
+  if(o.type==='continuous') {
+    return current <= target ? 100 : Math.max(0, 100-(current-target)*10);
+  }
+  if(target===start) return current>=target?100:0;
+  return Math.max(0, Math.min(100, ((current-start)/(target-start))*100));
+}
+
+function getObjStatus(o, pct) {
+  if(pct>=100) return {cls:'achieved',label:'Conseguido ✓',badgeCls:'green',color:'var(--green)'};
+  if(pct>=60)  return {cls:'progress',label:'En progreso',badgeCls:'accent',color:'var(--accent)'};
+  if(pct>=30)  return {cls:'warning',label:'Ritmo lento',badgeCls:'amber',color:'var(--amber)'};
+  return {cls:'pending',label:'Iniciando',badgeCls:'gray',color:'var(--text3)'};
+}
+
+// ===================== CHARTS =====================
+var chartInstances = {};
+function initOrUpdateChart(id, type, data, extraOpts) {
+  var canvas = document.getElementById(id);
+  if(!canvas) return;
+  if(chartInstances[id]) { chartInstances[id].destroy(); }
+  chartInstances[id] = new Chart(canvas, {
+    type,
+    data,
+    options: Object.assign({
+      responsive:true, maintainAspectRatio:false,
+      plugins:{legend:{display:type==='line'&&data.datasets.length>1,labels:{color:'#71717a',font:{size:11}}}},
+      scales:{
+        y:{ticks:{color:'#52525b',font:{size:11}},grid:{color:'rgba(255,255,255,0.04)'}},
+        x:{ticks:{color:'#52525b',font:{size:11}},grid:{display:false}}
+      }
+    }, extraOpts||{})
+  });
+}
+
+// ===================== UTILS =====================
+function initials(name) { return name.split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2); }
+function formatDate(d) {
+  if(!d) return '';
+  var dt = new Date(d+'T12:00:00');
+  return dt.toLocaleDateString('es-ES',{day:'numeric',month:'short',year:'numeric'});
+}
+function rpeColor(r) { if(r<=6) return 'badge-green'; if(r<=7) return 'badge-accent'; if(r<=8) return 'badge-amber'; return 'badge-red'; }
+function toast(msg) {
+  var t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'),2200);
+}
+
+// ===================== INIT =====================
+state.sessFilter = 'all';
+renderDashboard();
+
+// Set today's date in inputs
+var today = new Date().toISOString().split('T')[0];
+['ns-date','nv-date','no-date'].forEach(id=>{ var el=document.getElementById(id); if(el) el.value=today; });
+
+// Keyboard: close modals on Escape
+document.addEventListener('keydown',e=>{ if(e.key==='Escape') document.querySelectorAll('.modal-overlay.open').forEach(m=>m.classList.remove('open')); });
+</script>
+</body>
+</html>
