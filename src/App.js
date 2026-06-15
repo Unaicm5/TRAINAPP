@@ -8,12 +8,14 @@ import Sessions from './pages/Sessions'
 import Valoraciones from './pages/Valoraciones'
 import Carga from './pages/Carga'
 import Nutricion from './pages/Nutricion'
+import ClientPortal from './pages/ClientPortal'
 import Sidebar from './components/Sidebar'
 import Toast from './components/Toast'
 
 export default function App() {
   const [session, setSession] = useState(null)
   const [loading, setLoading] = useState(true)
+  const [role, setRole] = useState(null)
   const [page, setPage] = useState('dashboard')
   const [selectedClientId, setSelectedClientId] = useState(null)
   const [toast, setToast] = useState(null)
@@ -21,13 +23,22 @@ export default function App() {
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session)
-      setLoading(false)
+      if (session) loadRole(session.user.id)
+      else setLoading(false)
     })
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setSession(session)
+      if (session) loadRole(session.user.id)
+      else { setRole(null); setLoading(false) }
     })
     return () => subscription.unsubscribe()
   }, [])
+
+  const loadRole = async (uid) => {
+    const { data } = await supabase.from('profiles').select('role').eq('id', uid).single()
+    setRole(data?.role || 'client')
+    setLoading(false)
+  }
 
   const showToast = (msg) => {
     setToast(msg)
@@ -50,10 +61,18 @@ export default function App() {
     </div>
   )
 
-  if (!session) return <Login onLogin={() => {}} />
+  if (!session) return <Login />
 
+  // CLIENT VIEW
+  if (role === 'client') return (
+    <>
+      <ClientPortal session={session} showToast={showToast} />
+      {toast && <Toast message={toast} />}
+    </>
+  )
+
+  // TRAINER VIEW
   const props = { navTo, showToast, session }
-
   return (
     <div style={{display:'flex',minHeight:'100vh'}}>
       <Sidebar page={page} navTo={navTo} session={session} />
