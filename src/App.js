@@ -35,8 +35,20 @@ export default function App() {
   }, [])
 
   const loadRole = async (uid) => {
-    const { data } = await supabase.from('profiles').select('role').eq('id', uid).single()
-    setRole(data?.role || 'client')
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('role')
+        .eq('id', uid)
+        .maybeSingle()
+      
+      if (error) { console.error('Error loading role:', error); setRole('client'); }
+      else if (!data) { setRole('client'); }
+      else { setRole(data.role || 'client'); }
+    } catch(e) {
+      console.error(e)
+      setRole('client')
+    }
     setLoading(false)
   }
 
@@ -63,7 +75,6 @@ export default function App() {
 
   if (!session) return <Login />
 
-  // CLIENT VIEW
   if (role === 'client') return (
     <>
       <ClientPortal session={session} showToast={showToast} />
@@ -71,7 +82,12 @@ export default function App() {
     </>
   )
 
-  // TRAINER VIEW
+  if (role === null) return (
+    <div style={{display:'flex',alignItems:'center',justifyContent:'center',height:'100vh',background:'var(--bg)'}}>
+      <p style={{color:'var(--text2)',fontSize:14}}>Verificando acceso...</p>
+    </div>
+  )
+
   const props = { navTo, showToast, session }
   return (
     <div style={{display:'flex',minHeight:'100vh'}}>
