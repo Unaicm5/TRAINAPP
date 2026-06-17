@@ -12,6 +12,8 @@ export default function ClientPortal({ session, showToast }) {
   const [loading, setLoading] = useState(true)
   const [registerModal, setRegisterModal] = useState(null)
   const [regForm, setRegForm] = useState({ rpe: 7, sleep: 7, fatigue: 4, pain: 2, loads: '', client_notes: '' })
+  const [msgModal, setMsgModal] = useState(false)
+  const [msgText, setMsgText] = useState('')
 
   useEffect(() => { loadData() }, [])
 
@@ -36,6 +38,14 @@ export default function ClientPortal({ session, showToast }) {
     showToast('¡Sesión registrada! ✓')
     setRegisterModal(null)
     loadData()
+  }
+
+  const sendMessage = async () => {
+    if (!msgText.trim() || !clientData) return
+    await supabase.from('mensajes').insert({ client_id: clientData.id, trainer_id: clientData.trainer_id, content: msgText, read: false })
+    showToast('Mensaje enviado ✓')
+    setMsgText('')
+    setMsgModal(false)
   }
 
   const logout = async () => { await supabase.auth.signOut() }
@@ -80,8 +90,13 @@ export default function ClientPortal({ session, showToast }) {
             <p style={{ fontSize: 13, color: 'var(--text3)' }}>Hola de nuevo,</p>
             <h1 style={{ fontFamily: 'Syne,sans-serif', fontSize: 22, fontWeight: 700 }}>{clientData.name} 👋</h1>
           </div>
-          <div style={{ width: 40, height: 40, borderRadius: '50%', background: `${clientData.color || '#a3e635'}22`, color: clientData.color || '#a3e635', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'Syne,sans-serif', fontSize: 14, fontWeight: 700 }}>
-            {clientData.name.slice(0, 2).toUpperCase()}
+          <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+            <button onClick={() => setMsgModal(true)} style={{ width: 40, height: 40, borderRadius: '50%', background: 'var(--bg3)', border: '1px solid var(--border)', color: 'var(--text2)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }} title="Escribir a tu entrenador">
+              <i className="ti ti-message" style={{ fontSize: 18 }}></i>
+            </button>
+            <div style={{ width: 40, height: 40, borderRadius: '50%', background: `${clientData.color || '#a3e635'}22`, color: clientData.color || '#a3e635', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'Syne,sans-serif', fontSize: 14, fontWeight: 700 }}>
+              {clientData.name.slice(0, 2).toUpperCase()}
+            </div>
           </div>
         </div>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 8 }}>
@@ -271,6 +286,20 @@ export default function ClientPortal({ session, showToast }) {
               <textarea value={regForm.client_notes} onChange={e => setRegForm({ ...regForm, client_notes: e.target.value })} placeholder="¿Cómo fue la sesión?" style={{ width: '100%', background: 'var(--bg3)', border: '1px solid var(--border2)', borderRadius: 'var(--r-sm)', color: 'var(--text)', fontFamily: 'DM Sans,sans-serif', fontSize: 14, padding: '9px 12px', resize: 'none', height: 70 }} />
             </div>
             <button onClick={registerSession} style={{ width: '100%', padding: '13px', background: 'var(--accent)', color: '#000', border: 'none', borderRadius: 'var(--r-sm)', fontSize: 15, fontWeight: 600, cursor: 'pointer', fontFamily: 'Syne,sans-serif' }}>Guardar sesión</button>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL MENSAJE */}
+      {msgModal && (
+        <div onClick={e => e.target === e.currentTarget && setMsgModal(false)} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(4px)', zIndex: 500, display: 'flex', alignItems: 'flex-end', justifyContent: 'center' }}>
+          <div style={{ background: 'var(--bg2)', border: '1px solid var(--border2)', borderRadius: 'var(--r) var(--r) 0 0', width: '100%', maxWidth: 480, padding: 24 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+              <h2 style={{ fontFamily: 'Syne,sans-serif', fontSize: 18, fontWeight: 700 }}>Escribir a tu entrenador</h2>
+              <button onClick={() => setMsgModal(false)} style={{ background: 'var(--bg4)', border: 'none', color: 'var(--text2)', width: 30, height: 30, borderRadius: '50%', cursor: 'pointer', fontSize: 18 }}>×</button>
+            </div>
+            <textarea value={msgText} onChange={e => setMsgText(e.target.value)} placeholder="Escribe tu mensaje aquí..." style={{ width: '100%', background: 'var(--bg3)', border: '1px solid var(--border2)', borderRadius: 'var(--r-sm)', color: 'var(--text)', fontFamily: 'DM Sans,sans-serif', fontSize: 14, padding: '12px', resize: 'none', height: 100, marginBottom: 16 }} autoFocus />
+            <button onClick={sendMessage} style={{ width: '100%', padding: '13px', background: 'var(--accent)', color: '#000', border: 'none', borderRadius: 'var(--r-sm)', fontSize: 15, fontWeight: 600, cursor: 'pointer', fontFamily: 'Syne,sans-serif' }}>Enviar mensaje</button>
           </div>
         </div>
       )}
