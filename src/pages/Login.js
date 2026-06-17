@@ -18,7 +18,14 @@ export default function Login() {
     } else {
       result = await supabase.auth.signUp({ email, password })
       if (!result.error) {
-        await supabase.from('profiles').upsert({ id: result.data.user.id, name: email.split('@')[0], role: 'trainer' })
+        // Check if this email is already registered as a client by some trainer
+        const { data: existingClient } = await supabase
+          .from('clients')
+          .select('id')
+          .eq('email', email)
+          .maybeSingle()
+        const role = existingClient ? 'client' : 'trainer'
+        await supabase.from('profiles').upsert({ id: result.data.user.id, name: email.split('@')[0], role })
       }
     }
     if (result.error) setError(result.error.message)
