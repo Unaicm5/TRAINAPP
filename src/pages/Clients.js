@@ -3,14 +3,14 @@ import { supabase } from '../lib/supabase'
 import { Card, Btn, Modal, FormGroup, PageHeader, Avatar, Badge, EmptyState } from '../components/UI'
 
 const COLORS = ['#a3e635','#60a5fa','#f472b6','#fb923c','#c084fc','#34d399']
-const GOALS = ['Fuerza y potencia','Pérdida de grasa','Rendimiento deportivo','Movilidad y salud','Otro']
+const GOALS = ['Rendimiento', 'Salud', 'Rehabilitación']
 
 export default function Clients({ navTo, showToast, session }) {
   const [clients, setClients] = useState([])
   const [sessions, setSessions] = useState([])
   const [modal, setModal] = useState(false)
   const [loading, setLoading] = useState(true)
-  const [form, setForm] = useState({ name: '', age: '', goal: GOALS[0], micro: 'Microciclo 1', color: COLORS[0], notes: '' })
+  const [form, setForm] = useState({ name: '', email: '', age: '', goal: GOALS[0], micro: 'Microciclo 1', color: COLORS[0], notes: '' })
 
   useEffect(() => { loadData() }, [])
 
@@ -30,7 +30,8 @@ export default function Clients({ navTo, showToast, session }) {
   const addClient = async () => {
     if (!form.name.trim()) return
     const { error } = await supabase.from('clients').insert({ ...form, age: parseInt(form.age) || null, trainer_id: session.user.id })
-    if (!error) { showToast(`${form.name} añadido ✓`); setModal(false); setForm({ name: '', age: '', goal: GOALS[0], micro: 'Microciclo 1', color: COLORS[0], notes: '' }); loadData() }
+    if (!error) { showToast(`${form.name} añadido ✓`); setModal(false); setForm({ name: '', email: '', age: '', goal: GOALS[0], micro: 'Microciclo 1', color: COLORS[0], notes: '' }); loadData() }
+    else { showToast('Error: revisa que el email no esté duplicado'); console.error(error) }
   }
 
   if (loading) return <p style={{ color: 'var(--text2)' }}>Cargando...</p>
@@ -71,6 +72,7 @@ export default function Clients({ navTo, showToast, session }) {
 
       <Modal title="Nuevo cliente" open={modal} onClose={() => setModal(false)}>
         <FormGroup label="Nombre completo"><input value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} placeholder="Carlos Martínez" /></FormGroup>
+        <FormGroup label="Email del cliente (con el que se registrará)"><input type="email" value={form.email} onChange={e => setForm({ ...form, email: e.target.value })} placeholder="carlos@email.com" /></FormGroup>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
           <FormGroup label="Edad"><input type="number" value={form.age} onChange={e => setForm({ ...form, age: e.target.value })} placeholder="28" /></FormGroup>
           <FormGroup label="Objetivo"><select value={form.goal} onChange={e => setForm({ ...form, goal: e.target.value })}>{GOALS.map(g => <option key={g}>{g}</option>)}</select></FormGroup>
