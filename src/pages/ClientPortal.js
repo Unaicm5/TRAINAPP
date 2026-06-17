@@ -14,6 +14,7 @@ export default function ClientPortal({ session, showToast }) {
   const [regForm, setRegForm] = useState({ rpe: 7, sleep: 7, fatigue: 4, pain: 2, loads: '', client_notes: '' })
   const [msgModal, setMsgModal] = useState(false)
   const [msgText, setMsgText] = useState('')
+  const [myMessages, setMyMessages] = useState([])
 
   useEffect(() => { loadData() }, [])
 
@@ -26,10 +27,12 @@ export default function ClientPortal({ session, showToast }) {
     const { data: v } = await supabase.from('valoraciones').select('*').eq('client_id', c.id).eq('visible', true).order('date', { ascending: false })
     const { data: o } = await supabase.from('objetivos').select('*').eq('client_id', c.id).eq('visible', true)
     const { data: p } = await supabase.from('planes_nutricionales').select('*').eq('client_id', c.id).eq('visible', true).order('date', { ascending: false })
+    const { data: msgs } = await supabase.from('mensajes').select('*').eq('client_id', c.id).order('created_at', { ascending: false })
     setSessions(s || [])
     setVals(v || [])
     setObjs(o || [])
     setPlans(p || [])
+    setMyMessages(msgs || [])
     setLoading(false)
   }
 
@@ -46,6 +49,7 @@ export default function ClientPortal({ session, showToast }) {
     showToast('Mensaje enviado ✓')
     setMsgText('')
     setMsgModal(false)
+    loadData()
   }
 
   const logout = async () => { await supabase.auth.signOut() }
@@ -91,8 +95,9 @@ export default function ClientPortal({ session, showToast }) {
             <h1 style={{ fontFamily: 'Syne,sans-serif', fontSize: 22, fontWeight: 700 }}>{clientData.name} 👋</h1>
           </div>
           <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
-            <button onClick={() => setMsgModal(true)} style={{ width: 40, height: 40, borderRadius: '50%', background: 'var(--bg3)', border: '1px solid var(--border)', color: 'var(--text2)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }} title="Escribir a tu entrenador">
+            <button onClick={() => setMsgModal(true)} style={{ width: 40, height: 40, borderRadius: '50%', background: 'var(--bg3)', border: '1px solid var(--border)', color: 'var(--text2)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative' }} title="Escribir a tu entrenador">
               <i className="ti ti-message" style={{ fontSize: 18 }}></i>
+              {myMessages.some(m => m.reply) && <span style={{ position: 'absolute', top: -2, right: -2, width: 10, height: 10, borderRadius: '50%', background: 'var(--accent)', border: '2px solid var(--bg)' }}></span>}
             </button>
             <div style={{ width: 40, height: 40, borderRadius: '50%', background: `${clientData.color || '#a3e635'}22`, color: clientData.color || '#a3e635', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'Syne,sans-serif', fontSize: 14, fontWeight: 700 }}>
               {clientData.name.slice(0, 2).toUpperCase()}
@@ -293,13 +298,35 @@ export default function ClientPortal({ session, showToast }) {
       {/* MODAL MENSAJE */}
       {msgModal && (
         <div onClick={e => e.target === e.currentTarget && setMsgModal(false)} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(4px)', zIndex: 500, display: 'flex', alignItems: 'flex-end', justifyContent: 'center' }}>
-          <div style={{ background: 'var(--bg2)', border: '1px solid var(--border2)', borderRadius: 'var(--r) var(--r) 0 0', width: '100%', maxWidth: 480, padding: 24 }}>
+          <div style={{ background: 'var(--bg2)', border: '1px solid var(--border2)', borderRadius: 'var(--r) var(--r) 0 0', width: '100%', maxWidth: 480, maxHeight: '85vh', display: 'flex', flexDirection: 'column', padding: 24 }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-              <h2 style={{ fontFamily: 'Syne,sans-serif', fontSize: 18, fontWeight: 700 }}>Escribir a tu entrenador</h2>
+              <h2 style={{ fontFamily: 'Syne,sans-serif', fontSize: 18, fontWeight: 700 }}>Tu entrenador</h2>
               <button onClick={() => setMsgModal(false)} style={{ background: 'var(--bg4)', border: 'none', color: 'var(--text2)', width: 30, height: 30, borderRadius: '50%', cursor: 'pointer', fontSize: 18 }}>×</button>
             </div>
-            <textarea value={msgText} onChange={e => setMsgText(e.target.value)} placeholder="Escribe tu mensaje aquí..." style={{ width: '100%', background: 'var(--bg3)', border: '1px solid var(--border2)', borderRadius: 'var(--r-sm)', color: 'var(--text)', fontFamily: 'DM Sans,sans-serif', fontSize: 14, padding: '12px', resize: 'none', height: 100, marginBottom: 16 }} autoFocus />
-            <button onClick={sendMessage} style={{ width: '100%', padding: '13px', background: 'var(--accent)', color: '#000', border: 'none', borderRadius: 'var(--r-sm)', fontSize: 15, fontWeight: 600, cursor: 'pointer', fontFamily: 'Syne,sans-serif' }}>Enviar mensaje</button>
+
+            {myMessages.length > 0 && (
+              <div style={{ overflowY: 'auto', marginBottom: 16, flex: 1 }}>
+                {myMessages.slice().reverse().map(m => (
+                  <div key={m.id} style={{ marginBottom: 14 }}>
+                    <div style={{ background: 'var(--accent)', color: '#000', borderRadius: '12px 12px 12px 4px', padding: '8px 12px', fontSize: 13, maxWidth: '85%', marginLeft: 'auto' }}>{m.content}</div>
+                    <div style={{ fontSize: 10, color: 'var(--text3)', textAlign: 'right', marginTop: 3 }}>{formatDate(m.created_at?.split('T')[0])}</div>
+                    {m.reply && (
+                      <div style={{ marginTop: 8 }}>
+                        <div style={{ background: 'var(--bg3)', borderRadius: '12px 12px 4px 12px', padding: '8px 12px', fontSize: 13, maxWidth: '85%', color: 'var(--text)' }}>{m.reply}</div>
+                        <div style={{ fontSize: 10, color: 'var(--text3)', marginTop: 3 }}>{formatDate(m.replied_at?.split('T')[0])}</div>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+
+            <div style={{ display: 'flex', gap: 8 }}>
+              <input value={msgText} onChange={e => setMsgText(e.target.value)} onKeyDown={e => e.key === 'Enter' && sendMessage()} placeholder="Escribe tu mensaje..." style={{ flex: 1, background: 'var(--bg3)', border: '1px solid var(--border2)', borderRadius: 'var(--r-sm)', color: 'var(--text)', fontFamily: 'DM Sans,sans-serif', fontSize: 14, padding: '11px 14px' }} autoFocus />
+              <button onClick={sendMessage} style={{ width: 44, background: 'var(--accent)', color: '#000', border: 'none', borderRadius: 'var(--r-sm)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <i className="ti ti-send" style={{ fontSize: 18 }}></i>
+              </button>
+            </div>
           </div>
         </div>
       )}
