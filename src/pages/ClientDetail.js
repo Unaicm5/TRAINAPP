@@ -101,8 +101,8 @@ export default function ClientDetail({ clientId, navTo, showToast, session }) {
       <Grid cols={4} style={{ marginBottom: 20 }}>
         <MetricCard label="Sesiones" value={`${done.length}/${sessions.length}`} color="var(--accent)" sub="completadas" />
         <MetricCard label="RPE medio" value={avgRpe} color="var(--amber)" sub="todas las sesiones" />
-        <MetricCard label="Microciclo" value={currentMicro} color="var(--blue)" sub="actual" />
-        <MetricCard label="Mesociclo" value={currentMeso} color="var(--text)" sub="actual" />
+        <MetricCard label="Microciclo" value={currentMicro.replace('Microciclo ', 'MC').replace('microciclo ', 'MC')} color="var(--blue)" sub="actual" />
+        <MetricCard label="Mesociclo" value={currentMeso.replace('Mesociclo ', 'MS').replace('mesociclo ', 'MS')} color="var(--text)" sub="actual" />
       </Grid>
 
       <Tabs tabs={[{ id: 'sesiones', label: 'Sesiones' }, { id: 'valoraciones', label: 'Valoraciones' }, { id: 'objetivos', label: 'Objetivos' }]} active={tab} onChange={setTab} />
