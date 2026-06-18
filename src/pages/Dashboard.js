@@ -101,7 +101,7 @@ export default function Dashboard({ navTo, session }) {
                       <button onClick={() => setReplyOpen(m.id)} style={{ marginTop: 8, fontSize: 12, color: 'var(--accent)', background: 'none', border: 'none', cursor: 'pointer', padding: 0, fontFamily: 'DM Sans,sans-serif' }}>Responder</button>
                     )}
                   </div>
-                  {!m.read && <button onClick={() => markMessageRead(m.id)} style={{ background: 'var(--bg4)', border: 'none', color: 'var(--text2)', width: 24, height: 24, borderRadius: '50%', cursor: 'pointer', fontSize: 14, flexShrink: 0 }} title="Marcar como leído">✓</button>}
+                  <button onClick={() => markMessageRead(m.id)} style={{ background: 'var(--bg4)', border: 'none', color: m.read ? 'var(--green)' : 'var(--text2)', width: 24, height: 24, borderRadius: '50%', cursor: 'pointer', fontSize: 14, flexShrink: 0 }} title="Marcar como leído">✓</button>
                 </div>
               </Card>
             )
