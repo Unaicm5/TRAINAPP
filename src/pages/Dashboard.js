@@ -15,7 +15,7 @@ export default function Dashboard({ navTo, session }) {
 
   const loadData = async () => {
     const { data: c } = await supabase.from('clients').select('*').eq('trainer_id', session.user.id)
-    const { data: m } = await supabase.from('mensajes').select('*').eq('trainer_id', session.user.id).order('created_at', { ascending: false }).limit(15)
+    const { data: m } = await supabase.from('mensajes').select('*').eq('trainer_id', session.user.id).eq('archived', false).order('created_at', { ascending: false }).limit(15)
     const { data: n } = await supabase.from('notas').select('*').eq('trainer_id', session.user.id).order('created_at', { ascending: false })
     setClients(c || [])
     setMessages(m || [])
@@ -51,6 +51,11 @@ export default function Dashboard({ navTo, session }) {
     await supabase.from('mensajes').update({ reply: text, replied_at: new Date().toISOString(), read: true }).eq('id', id)
     setReplyText({ ...replyText, [id]: '' })
     setReplyOpen(null)
+    loadData()
+  }
+
+  const archiveMessage = async (id) => {
+    await supabase.from('mensajes').update({ archived: true }).eq('id', id)
     loadData()
   }
 
@@ -99,6 +104,9 @@ export default function Dashboard({ navTo, session }) {
                     )}
                     {!m.reply && replyOpen !== m.id && (
                       <button onClick={() => setReplyOpen(m.id)} style={{ marginTop: 8, fontSize: 12, color: 'var(--accent)', background: 'none', border: 'none', cursor: 'pointer', padding: 0, fontFamily: 'DM Sans,sans-serif' }}>Responder</button>
+                    )}
+                    {m.reply && (
+                      <button onClick={() => archiveMessage(m.id)} style={{ marginTop: 8, fontSize: 12, color: 'var(--text3)', background: 'none', border: 'none', cursor: 'pointer', padding: 0, fontFamily: 'DM Sans,sans-serif' }}>Archivar ✓</button>
                     )}
                   </div>
                   <button onClick={() => markMessageRead(m.id)} style={{ background: 'var(--bg4)', border: 'none', color: m.read ? 'var(--green)' : 'var(--text2)', width: 24, height: 24, borderRadius: '50%', cursor: 'pointer', fontSize: 14, flexShrink: 0 }} title="Marcar como leído">✓</button>
