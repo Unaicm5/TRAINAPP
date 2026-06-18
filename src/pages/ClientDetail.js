@@ -12,7 +12,7 @@ export default function ClientDetail({ clientId, navTo, showToast, session }) {
   const [sessionModal, setSessionModal] = useState(false)
   const [registerModal, setRegisterModal] = useState(null)
   const [objModal, setObjModal] = useState(false)
-  const [nsForm, setNsForm] = useState({ name: '', micro: '', date: '', rpe_target: 7, exercises: '', videos: '', notes: '' })
+  const [nsForm, setNsForm] = useState({ name: '', micro: '', mesociclo: '', date: '', rpe_target: 7, exercises: '', videos: '', notes: '' })
   const [regForm, setRegForm] = useState({ rpe: 7, sleep: 7, fatigue: 4, pain: 2, loads: '', client_notes: '' })
   const [objForm, setObjForm] = useState({ title: '', start_val: '', current_val: '', target_val: '', type: 'deadline', deadline: '', visible: true })
 
@@ -32,7 +32,7 @@ export default function ClientDetail({ clientId, navTo, showToast, session }) {
 
   const addSession = async () => {
     const { error } = await supabase.from('sessions').insert({ ...nsForm, client_id: clientId, rpe_target: parseInt(nsForm.rpe_target), done: false })
-    if (!error) { showToast('Sesión creada ✓'); setSessionModal(false); setNsForm({ name: '', micro: '', date: '', rpe_target: 7, exercises: '', videos: '', notes: '' }); loadData() }
+    if (!error) { showToast('Sesión creada ✓'); setSessionModal(false); setNsForm({ name: '', micro: '', mesociclo: '', date: '', rpe_target: 7, exercises: '', videos: '', notes: '' }); loadData() }
   }
 
   const registerSession = async () => {
@@ -77,9 +77,9 @@ export default function ClientDetail({ clientId, navTo, showToast, session }) {
   const done = sessions.filter(s => s.done)
   const rpes = done.filter(s => s.rpe).map(s => s.rpe)
   const avgRpe = rpes.length ? (rpes.reduce((a, b) => a + b, 0) / rpes.length).toFixed(1) : '—'
-  const sleeps = done.filter(s => s.sleep).map(s => s.sleep)
-  const avgSleep = sleeps.length ? (sleeps.reduce((a, b) => a + b, 0) / sleeps.length).toFixed(1) : '—'
-
+  const lastSession = sessions[0]
+  const currentMicro = lastSession?.micro || client.micro || '—'
+  const currentMeso = lastSession?.mesociclo || '—'
   const cats = [...new Set(vals.map(v => v.category))]
 
   return (
@@ -92,17 +92,17 @@ export default function ClientDetail({ clientId, navTo, showToast, session }) {
         <Avatar name={client.name} color={client.color || '#a3e635'} size={52} />
         <div style={{ flex: 1 }}>
           <h2 style={{ fontFamily: 'Syne,sans-serif', fontSize: 22, fontWeight: 700 }}>{client.name}</h2>
-          <p style={{ fontSize: 13, color: 'var(--text2)' }}>{client.age ? `${client.age} años · ` : ''}{client.goal} · {client.micro}</p>
+          <p style={{ fontSize: 13, color: 'var(--text2)' }}>{client.age ? `${client.age} años · ` : ''}{client.goal}</p>
         </div>
         <Btn size="sm" variant="ghost" onClick={() => setSessionModal(true)}><i className="ti ti-plus"></i> Sesión</Btn>
         <Btn size="sm" variant="ghost" onClick={() => setObjModal(true)}><i className="ti ti-target"></i> Objetivo</Btn>
       </div>
 
       <Grid cols={4} style={{ marginBottom: 20 }}>
-        <MetricCard label="Sesiones" value={`${done.length}/${sessions.length}`} color="var(--accent)" />
-        <MetricCard label="RPE medio" value={avgRpe} color="var(--amber)" />
-        <MetricCard label="Sueño medio" value={avgSleep} color="var(--green)" />
-        <MetricCard label="Objetivos" value={objs.length} />
+        <MetricCard label="Sesiones" value={`${done.length}/${sessions.length}`} color="var(--accent)" sub="completadas" />
+        <MetricCard label="RPE medio" value={avgRpe} color="var(--amber)" sub="todas las sesiones" />
+        <MetricCard label="Microciclo" value={currentMicro} color="var(--blue)" sub="actual" />
+        <MetricCard label="Mesociclo" value={currentMeso} color="var(--text)" sub="actual" />
       </Grid>
 
       <Tabs tabs={[{ id: 'sesiones', label: 'Sesiones' }, { id: 'valoraciones', label: 'Valoraciones' }, { id: 'objetivos', label: 'Objetivos' }]} active={tab} onChange={setTab} />
@@ -117,7 +117,7 @@ export default function ClientDetail({ clientId, navTo, showToast, session }) {
                 <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 10, marginBottom: 8 }}>
                   <div>
                     <div style={{ fontSize: 14, fontWeight: 500 }}>{s.name}</div>
-                    <div style={{ fontSize: 12, color: 'var(--text2)', marginTop: 2 }}>{formatDate(s.date)} · {s.micro} · RPE obj. {s.rpe_target}</div>
+                    <div style={{ fontSize: 12, color: 'var(--text2)', marginTop: 2 }}>{formatDate(s.date)} · {s.mesociclo ? `${s.mesociclo} · ` : ''}{s.micro} · RPE obj. {s.rpe_target}</div>
                   </div>
                   <div style={{ display: 'flex', gap: 6 }}>
                     {s.done ? <Badge color={rpeColor(s.rpe)}>✓ RPE {s.rpe}</Badge> : <Badge color="gray">Pendiente</Badge>}
@@ -204,13 +204,14 @@ export default function ClientDetail({ clientId, navTo, showToast, session }) {
       {/* MODAL NUEVA SESIÓN */}
       <Modal title="Nueva sesión" open={sessionModal} onClose={() => setSessionModal(false)}>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-          <FormGroup label="Nombre"><input value={nsForm.name} onChange={e => setNsForm({ ...nsForm, name: e.target.value })} placeholder="HT Squat · MC1" /></FormGroup>
-          <FormGroup label="Microciclo"><input value={nsForm.micro} onChange={e => setNsForm({ ...nsForm, micro: e.target.value })} placeholder="Microciclo 1" /></FormGroup>
+          <FormGroup label="Nombre"><input value={nsForm.name} onChange={e => setNsForm({ ...nsForm, name: e.target.value })} placeholder="HT Squat" /></FormGroup>
+          <FormGroup label="Mesociclo"><input value={nsForm.mesociclo} onChange={e => setNsForm({ ...nsForm, mesociclo: e.target.value })} placeholder="Mesociclo 1" /></FormGroup>
         </div>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+          <FormGroup label="Microciclo"><input value={nsForm.micro} onChange={e => setNsForm({ ...nsForm, micro: e.target.value })} placeholder="Microciclo 1" /></FormGroup>
           <FormGroup label="Fecha"><input type="date" value={nsForm.date} onChange={e => setNsForm({ ...nsForm, date: e.target.value })} /></FormGroup>
-          <FormGroup label="RPE objetivo"><RPESelector value={nsForm.rpe_target} onChange={v => setNsForm({ ...nsForm, rpe_target: v })} /></FormGroup>
         </div>
+        <FormGroup label="RPE objetivo"><RPESelector value={nsForm.rpe_target} onChange={v => setNsForm({ ...nsForm, rpe_target: v })} /></FormGroup>
         <FormGroup label="Ejercicios (uno por línea: nombre · reps · series · carga)">
           <textarea value={nsForm.exercises} onChange={e => setNsForm({ ...nsForm, exercises: e.target.value })} style={{ height: 100 }} placeholder="Sentadilla búlgara · 6/lado · 3 series · KB 10-12kg&#10;Press landmine · 8/lado · 3 series · 10kg" />
         </FormGroup>
