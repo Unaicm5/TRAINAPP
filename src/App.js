@@ -8,6 +8,7 @@ import Sessions from './pages/Sessions'
 import Valoraciones from './pages/Valoraciones'
 import Carga from './pages/Carga'
 import Nutricion from './pages/Nutricion'
+import Importar from './pages/Importar'
 import ClientPortal from './pages/ClientPortal'
 import Sidebar from './components/Sidebar'
 import Toast from './components/Toast'
@@ -36,19 +37,11 @@ export default function App() {
 
   const loadRole = async (uid) => {
     try {
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('role')
-        .eq('id', uid)
-        .maybeSingle()
-      
-      if (error) { console.error('Error loading role:', error); setRole('client'); }
+      const { data, error } = await supabase.from('profiles').select('role').eq('id', uid).maybeSingle()
+      if (error) { setRole('client'); }
       else if (!data) { setRole('client'); }
       else { setRole(data.role || 'client'); }
-    } catch(e) {
-      console.error(e)
-      setRole('client')
-    }
+    } catch(e) { setRole('client') }
     setLoading(false)
   }
 
@@ -100,6 +93,7 @@ export default function App() {
         {page === 'valoraciones' && <Valoraciones {...props} />}
         {page === 'carga' && <Carga {...props} />}
         {page === 'nutricion' && <Nutricion {...props} />}
+        {page === 'importar' && <Importar {...props} />}
       </main>
       {toast && <Toast message={toast} />}
     </div>
